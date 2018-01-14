@@ -12193,6 +12193,9 @@ B340A  3A 40V SMA &lt;br&gt;</description>
 <part name="C6" library="SparkFun-Capacitors" deviceset="1UF-25V-10%(0805)" device="&quot;"/>
 <part name="SUPPLY2" library="SparkFun-Aesthetics" deviceset="VIN" device=""/>
 <part name="GND6" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
+<part name="R2" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="40k"/>
+<part name="R3" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="10k"/>
+<part name="GND7" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -12433,6 +12436,15 @@ LED supply option</text>
 <instance part="C6" gate="G$1" x="264.16" y="78.74"/>
 <instance part="SUPPLY2" gate="G$1" x="264.16" y="83.82"/>
 <instance part="GND6" gate="1" x="264.16" y="73.66"/>
+<instance part="R2" gate="G$1" x="345.44" y="139.7" smashed="yes" rot="R270">
+<attribute name="NAME" x="346.9386" y="143.51" size="1.778" layer="95" rot="R270"/>
+<attribute name="VALUE" x="342.138" y="143.51" size="1.778" layer="96" rot="R270"/>
+</instance>
+<instance part="R3" gate="G$1" x="345.44" y="124.46" smashed="yes" rot="R270">
+<attribute name="NAME" x="346.9386" y="128.27" size="1.778" layer="95" rot="R270"/>
+<attribute name="VALUE" x="342.138" y="128.27" size="1.778" layer="96" rot="R270"/>
+</instance>
+<instance part="GND7" gate="1" x="345.44" y="114.3"/>
 </instances>
 <busses>
 </busses>
@@ -12686,6 +12698,11 @@ LED supply option</text>
 <segment>
 <pinref part="C6" gate="G$1" pin="2"/>
 <pinref part="GND6" gate="1" pin="GND"/>
+</segment>
+<segment>
+<pinref part="GND7" gate="1" pin="GND"/>
+<pinref part="R3" gate="G$1" pin="2"/>
+<wire x1="345.44" y1="116.84" x2="345.44" y2="119.38" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="12V" class="0">
@@ -13127,9 +13144,9 @@ LED supply option</text>
 <label x="10.16" y="160.02" size="1.27" layer="95" rot="R90" xref="yes"/>
 </segment>
 <segment>
-<pinref part="IC2" gate="G$1" pin="A6"/>
-<wire x1="185.42" y1="137.16" x2="180.34" y2="137.16" width="0.1524" layer="91"/>
-<label x="180.34" y="137.16" size="1.27" layer="95" rot="R180" xref="yes"/>
+<pinref part="IC2" gate="G$1" pin="A5"/>
+<wire x1="185.42" y1="142.24" x2="180.34" y2="142.24" width="0.1524" layer="91"/>
+<label x="180.34" y="142.24" size="1.27" layer="95" rot="R180" xref="yes"/>
 </segment>
 </net>
 <net name="CSB" class="0">
@@ -13213,9 +13230,12 @@ LED supply option</text>
 <net name="FAN_POWER" class="0">
 <segment>
 <pinref part="Q4" gate="G$1" pin="D"/>
-<wire x1="345.44" y1="149.86" x2="345.44" y2="144.78" width="0.1524" layer="91"/>
-<wire x1="345.44" y1="144.78" x2="337.82" y2="144.78" width="0.1524" layer="91"/>
-<label x="337.82" y="144.78" size="1.27" layer="95" rot="R180" xref="yes"/>
+<wire x1="345.44" y1="149.86" x2="345.44" y2="147.32" width="0.1524" layer="91"/>
+<wire x1="345.44" y1="147.32" x2="342.9" y2="147.32" width="0.1524" layer="91"/>
+<label x="342.9" y="147.32" size="1.27" layer="95" rot="R180" xref="yes"/>
+<pinref part="R2" gate="G$1" pin="1"/>
+<wire x1="345.44" y1="144.78" x2="345.44" y2="147.32" width="0.1524" layer="91"/>
+<junction x="345.44" y="147.32"/>
 </segment>
 <segment>
 <pinref part="JP13" gate="G$1" pin="2"/>
@@ -13288,11 +13308,20 @@ LED supply option</text>
 <label x="228.6" y="142.24" size="1.27" layer="95" xref="yes"/>
 </segment>
 </net>
-<net name="SWITCH_ENABLED" class="0">
+<net name="FAN_POWER_SENSE" class="0">
 <segment>
-<pinref part="IC2" gate="G$1" pin="A5"/>
-<wire x1="185.42" y1="142.24" x2="180.34" y2="142.24" width="0.1524" layer="91"/>
-<label x="180.34" y="142.24" size="1.27" layer="95" rot="R180" xref="yes"/>
+<pinref part="IC2" gate="G$1" pin="A6"/>
+<wire x1="185.42" y1="137.16" x2="180.34" y2="137.16" width="0.1524" layer="91"/>
+<label x="180.34" y="137.16" size="1.27" layer="95" rot="R180" xref="yes"/>
+</segment>
+<segment>
+<pinref part="R2" gate="G$1" pin="2"/>
+<pinref part="R3" gate="G$1" pin="1"/>
+<wire x1="345.44" y1="129.54" x2="345.44" y2="132.08" width="0.1524" layer="91"/>
+<wire x1="345.44" y1="132.08" x2="345.44" y2="134.62" width="0.1524" layer="91"/>
+<wire x1="345.44" y1="132.08" x2="342.9" y2="132.08" width="0.1524" layer="91"/>
+<label x="342.9" y="132.08" size="1.27" layer="95" rot="R180" xref="yes"/>
+<junction x="345.44" y="132.08"/>
 </segment>
 </net>
 </nets>
