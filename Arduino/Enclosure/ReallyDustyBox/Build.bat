@@ -1,7 +1,7 @@
 @echo off
 
 @echo Deleting old STL files.
-#del *.stl
+del *.stl
 
 @echo Building Really Dusty Box STLs
 
@@ -36,3 +36,7 @@
 @echo Fan Adaptor - 100mm
 "C:\Program Files\OpenSCAD\openscad.com" -o FanAdaptor-120-2-100.stl -D "width=120;height=120;ductSize=100;coneHeight=20" FanAdaptor.scad
 "C:\Program Files\OpenSCAD\openscad.com" -o FanAdaptor-140-2-100.stl -D "width=140;height=140;ductSize=100;coneHeight=40" FanAdaptor.scad
+
+@echo Electronics Enclosure
+"C:\Program Files\OpenSCAD\openscad.com" -o ElectronicsCase-Up.stl -D "pcbPostHeight=5;faceUp=true" FanAdaptor.scad
+"C:\Program Files\OpenSCAD\openscad.com" -o ElectronicsCase-Down.stl -D "pcbPostHeight=25;faceUp=false" FanAdaptor.scad
