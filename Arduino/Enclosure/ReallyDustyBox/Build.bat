@@ -40,3 +40,6 @@ del *.stl
 @echo Electronics Enclosure
 "C:\Program Files\OpenSCAD\openscad.com" -o ElectronicsCase-Up.stl -D "pcbPostHeight=5;faceUp=true" FanAdaptor.scad
 "C:\Program Files\OpenSCAD\openscad.com" -o ElectronicsCase-Down.stl -D "pcbPostHeight=25;faceUp=false" FanAdaptor.scad
+
+@echo FanSizeAdaptors
+"C:\Program Files\OpenSCAD\openscad.com" -o FanSizeAdaptor-140-120.stl -D "outerSize=140;thickness=3" FanSizeAdaptor.scad
