@@ -6,13 +6,13 @@
 
 // fan x,y
 // 120mm fan.
-//width = 120;
-//height = 120;
+width = 120;
+height = 120;
 //holeOffset = 7.5;
 
 // 140mm fan
-width = 140;
-height = 140;
+//width = 140;
+///height = 140;
 holeOffset = 7.5;
 
 echo("fan width",width );
@@ -122,7 +122,7 @@ module filterMount() {
                 translate([(width)/2, (height/2), z]) {
                     for(angle = [0 : 30 : 180]) {
                         rotate([0,0,angle]) {
-                            cube([28, width+10, 1], center=true);
+                            cube([24, width+10, 1], center=true);
                         }
                     }
                 }
