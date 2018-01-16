@@ -8,10 +8,15 @@ del *.stl
 @echo Spacers
 "C:\Program Files\OpenSCAD\openscad.com" -o Spacer.stl Spacer.scad
 
-@echo Filter Frame
-"C:\Program Files\OpenSCAD\openscad.com" -o FilterFrame-Inside.stl -D "assetTrackerVersion=2;batteryCompartmentRight=true;batteryCompartmentLeft=false;includeAerialSlot=true;includeAerialPanel=false" FilterFrame.scad
-"C:\Program Files\OpenSCAD\openscad.com" -o FilterFrame-Outside.stl -D "assetTrackerVersion=1;batteryCompartmentRight=true;batteryCompartmentLeft=false;includeAerialSlot=true;includeAerialPanel=false" FilterFrame.scad
-"C:\Program Files\OpenSCAD\openscad.com" -o FilterFrame-Retainer.stl -D "assetTrackerVersion=1;batteryCompartmentRight=true;batteryCompartmentLeft=false;includeAerialSlot=true;includeAerialPanel=false" FilterFrame.scad
+@echo Filter Frame 6x6
+"C:\Program Files\OpenSCAD\openscad.com" -o FilterFrame-6x6-Inside.stl -D "isInsideFrame=true;depth=25;holesDown=6;holesAcross=6" FilterFrame.scad
+"C:\Program Files\OpenSCAD\openscad.com" -o FilterFrame-6x6-Outside.stl -D "isInsideFrame=true;depth=20;holesDown=6;holesAcross=6" FilterFrame.scad
+"C:\Program Files\OpenSCAD\openscad.com" -o FilterFrame-6x6-Retainer.stl -D "isInsideFrame=true;depth=2;holesDown=6;holesAcross=6" FilterFrame.scad
+
+@echo Filter Frame 3x3
+"C:\Program Files\OpenSCAD\openscad.com" -o FilterFrame-3x3-Inside.stl -D "isInsideFrame=true;depth=25;holesDown=3;holesAcross=3" FilterFrame.scad
+"C:\Program Files\OpenSCAD\openscad.com" -o FilterFrame-3x3-Outside.stl -D "isInsideFrame=true;depth=20;holesDown=3;holesAcross=3" FilterFrame.scad
+"C:\Program Files\OpenSCAD\openscad.com" -o FilterFrame-3x3-Retainer.stl -D "isInsideFrame=true;depth=2;holesDown=3;holesAcross=3" FilterFrame.scad
 
 @echo Mini Fan Filter
 "C:\Program Files\OpenSCAD\openscad.com" -o FanFilter-120-Mini.stl -D "width=120;height=120;totalDepth=60" FanFilter.scad
@@ -38,8 +43,8 @@ del *.stl
 "C:\Program Files\OpenSCAD\openscad.com" -o FanAdaptor-140-2-100.stl -D "width=140;height=140;ductSize=100;coneHeight=40" FanAdaptor.scad
 
 @echo Electronics Enclosure
-"C:\Program Files\OpenSCAD\openscad.com" -o ElectronicsCase-Up.stl -D "pcbPostHeight=5;faceUp=true" FanAdaptor.scad
-"C:\Program Files\OpenSCAD\openscad.com" -o ElectronicsCase-Down.stl -D "pcbPostHeight=25;faceUp=false" FanAdaptor.scad
+"C:\Program Files\OpenSCAD\openscad.com" -o ElectronicsCase-Up.stl -D "pcbPostHeight=7.5;faceUp=true" FanAdaptor.scad
+"C:\Program Files\OpenSCAD\openscad.com" -o ElectronicsCase-Down.stl -D "pcbPostHeight=26.5;faceUp=false" FanAdaptor.scad
 
 @echo FanSizeAdaptors
 "C:\Program Files\OpenSCAD\openscad.com" -o FanSizeAdaptor-140-120.stl -D "outerSize=140;thickness=3" FanSizeAdaptor.scad
