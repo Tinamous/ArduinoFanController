@@ -9,6 +9,6 @@ height = 60;
 $fn=180;
 
 difference() {
-    cylinder(d=12, h=height);
-    cylinder(d=5, h=height);
+    cylinder(d=14, h=height);
+    cylinder(d=6, h=height);
 }
