@@ -19,9 +19,9 @@ echo("fan width",width );
 echo("fan height", height);
 echo("fan holeOffset", holeOffset);
 
-//totalDepth = 260; // Maxing out the 
-totalDepth = 160; // Maxing out Ultimaker 2+
-//totalDepth = 60; // Debugging
+totalDepth = 260; // Maxing out the 
+//totalDepth = 160; // Maxing out Ultimaker 2+
+//totalDepth = 95; // Debugging
 coneHeight = 80;
 depth = totalDepth - coneHeight;
 echo("totalDepth", totalDepth);
