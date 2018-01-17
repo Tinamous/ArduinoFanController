@@ -25,7 +25,10 @@ depth = 20;
 // is removed for cleaning.
 
 // true for inside frame, false for outside frame.
-isInsideFrame = false;
+isInsideFrame = true;
+
+holesDown = 6;
+holesAcross = 6;
 
 
 module noCornersCube(width, height, depth, cornerRadius) {
@@ -75,6 +78,21 @@ module roundedCube(width, height, depth, cornerRadius) {
 }
 
 module mainFrame() {
+    yOffset = 12;
+    availableHoleHeight = height-(2*yOffset);
+    echo("availableHoleHeight",availableHoleHeight);
+    holeHeight = (availableHoleHeight/holesDown);
+    echo("holeHeight",holeHeight);
+    
+    
+    xOffset = 12;
+    echo("width",width);
+    availableHoleWidth = width-(2*xOffset);
+    echo("availableHoleWidth",availableHoleWidth);
+    holeWidth = availableHoleWidth/holesAcross;
+    echo("holeWidth", holeWidth);
+            
+    
     difference() {
         union(){
             roundedCube(width,height,depth, 6);
@@ -82,44 +100,30 @@ module mainFrame() {
         union() {
             mountingHoles();
             
-            translate([3,3,3]) {
+            translate([3,3,2]) {
                 //cube  ([width-6,height-6,depth-2.99]);
-                roundedCube(width-6,height-6,depth-2.99, 4);
+                roundedCube(width-6,height-6,depth, 4);
             }
-            
-            holesDown = 4;
-            holesAcross = 4;
-            
-            yOffset = 10;
-            availableHoleHeight = height-(2*yOffset);
-            echo("availableHoleHeight",availableHoleHeight);
-            holeHeight = availableHoleHeight/holesDown;
-            echo("holeHeight",holeHeight);
-            
-            
-            xOffset = 10;
-            echo("width",width);
-            availableHoleWidth = width-(2*xOffset);
-            echo("availableHoleWidth",availableHoleWidth);
-            holeWidth = availableHoleWidth/holesAcross;
-            echo("holeWidth", holeWidth);
-            
-            for(y = [yOffset : holeHeight : height - holeHeight]) {
-                
-                
-                
-                //holeWidth = 52;
-                for(x = [xOffset : holeWidth : width-holeWidth]) {
-            
-                    // Ultimaker Wall thickness is 1.5ishmm
-                    // make our walls that size to save wall + filler
-                    translate([x+1,y+1,-0.01]) {
-                        //cube([holeWidth-2, holeHeight-2, depth+0.02]);
-                        roundedCube(holeWidth-2, holeHeight-2, depth+0.02, 4);
-                        //noCornersCube(holeWidth-2, holeHeight-2, depth+0.02, 4);
-                    }
-                }
+                        
+            // Hollow out the main body.
+            translate([xOffset,yOffset,-0.1]) {
+                //cube  ([width-6,height-6,depth-2.99]);
+                roundedCube(width-(2*xOffset),height-(2*yOffset),depth+0.2, 4);
             }
+        }
+    }
+    
+    // Add the cross members to split the open space into a grid.
+    // No support at first or last position.
+    for(y = [yOffset + holeHeight : holeHeight : availableHoleHeight]) {
+        translate([xOffset,y, 0]) {
+            cube([availableHoleWidth, 2 , 2]);
+        }
+    }
+        
+    for(x = [xOffset + holeWidth : holeWidth : availableHoleWidth]) {
+        translate([x,yOffset, 0]) {
+            cube([2 , availableHoleHeight, 2]);
         }
     }
 }
@@ -198,17 +202,69 @@ module ReverseMountingPoint(x,y) {
     }
 }
 
-union() {
-    difference() {
-        union() {
-            mainFrame();
-            mountingPoints();
-        }
-        union() {
-            mountingHoles();
-        }
+module holeDrillingTemplate() {
+    // mounting points.
+    color("blue") {
+        circleAt(6, 6, 4.5);
+        circleAt(width-6, 6, 4.5);
+        circleAt(width-6, height-6, 4.5);
+        circleAt(6, height-6, 4.5);
+        
+        circleAt(6, height/2, 4.5);
+        circleAt(width-6, height/2, 4.5);
     }
     
+    yOffset = 12;
+    availableHoleHeight = height-(2*yOffset);
+    echo("availableHoleHeight",availableHoleHeight);
+    holeHeight = (availableHoleHeight/holesDown);
+    echo("holeHeight",holeHeight);
     
-        
+    
+    // Big holes for air...
+    xOffset = 12;
+    echo("width",width);
+    availableHoleWidth = width-(2*xOffset);
+    echo("availableHoleWidth",availableHoleWidth);
+    holeWidth = availableHoleWidth/holesAcross;
+    echo("holeWidth", holeWidth);
+    
+    // Hole drilling template.
+    for(y = [yOffset : holeHeight : availableHoleHeight]) {
+        for(x = [xOffset : holeWidth : availableHoleWidth]) {
+                centerX = x + (holeWidth/2)+1;
+                centerY = y + (holeHeight/2)+1;
+                color("red") circleAt(centerX, centerY, 2);
+        }
+    }
 }
+
+module circleAt(x,y, size) {
+    echo("Hole at", x, y);
+    translate ([x, y]) 
+    {
+        difference() {
+            circle(d=size);
+            circle(d=size/2);
+        }
+    }
+}
+
+
+module main() {
+    union() {
+        difference() {
+            union() {
+                mainFrame();
+                mountingPoints();
+            }
+            union() {
+                mountingHoles();
+            }
+        }
+    }
+}
+
+main();
+
+//holeDrillingTemplate();
