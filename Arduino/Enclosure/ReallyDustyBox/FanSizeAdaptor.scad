@@ -5,12 +5,13 @@ thickness = 3;
 $fn=80;
 
 // These are ignored at repsent.
-outerSize = 140;
+outerSize = 150; // 5mm extra each side to cover main hole well.
 innerSize = 120;
 
 module fanMountinghole(x,y) {
     translate([x,y,-0.1]) {
-        cylinder(d=5, h=thickness+0.2);
+        //cylinder(d=5, h=thickness+0.2);
+        cylinder(d=5,d2=10, h=thickness+0.2);
     }
 }
 
@@ -38,11 +39,17 @@ module fan120MainHole() {
 
 difference() {
     union() {
-        cube([140,140,thickness]);
+        cube([outerSize,outerSize,thickness]);
     }
     union() {
-        fan140Mountingholes();
-        translate([10,10,0]) {
+        toCenter140 = (outerSize - 140)/2;
+        toCenter = (outerSize - innerSize)/2;
+        translate([toCenter140,toCenter140,0]) {
+            fan140Mountingholes();
+        }
+        
+        toCenter = (outerSize - innerSize)/2;
+        translate([toCenter,toCenter,0]) {
             fan120MountingHoles();
             fan120MainHole();
         }
