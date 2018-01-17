@@ -7,14 +7,14 @@
 
 width = 120;
 height = 120;
-depth = 30;
+depth = 32;
 
 // If the Arduino is face up
 faceUp = true;
 
 // 5mm posts to have the Arduino facing up (sampling outside the box) (faceUp = true)
 // 25mm posts for Arduino face down (sampling inside the box) (faceUp = false)
-pcbPostHeight = 5;
+pcbPostHeight = 7.5;
 
 // PCB is 100x100
 pcbXOffset = (width - 100)/2;
@@ -25,6 +25,22 @@ echo("height", height);
 echo("depth", depth);
 
 $fn=80;
+
+// Opening for 40mm fan (Fan5) in the back to allow air to be dragged in 
+// and over sensors from outside. Shouldn't need fan for internal air sampling
+// (but will be effected by activated carbon filter so maybe not the best).
+// might also want to put the sensor inside fan path before the charcoal.
+
+// Open up DC jack socket - needs to be lower.
+
+// Increase height (to 6mm) of standoffs.
+// make standoff holes go all the way though.
+
+// mount on back & inside for CCS811 
+
+//todo
+// Think about Arduino battery holder.....
+// Holes for sensors when arduino face down
 
 module noCornersCube(width, height, depth, cornerRadius) {
     
@@ -79,7 +95,7 @@ yOffset = (height - 100)/2;
     
     
     
-    translate([xOffset, yOffset,1.5]) {
+    translate([xOffset, yOffset,0]) {
         pcbMountingPost(holeOffset,holeOffset, pcbPostHeight);
         pcbMountingPost(holeOffset+90,holeOffset,pcbPostHeight);
         pcbMountingPost(holeOffset+90,holeOffset+90,pcbPostHeight);
@@ -102,14 +118,14 @@ holeOffset = 5;
    
     
     translate([pcbXOffset, pcbYOffset,1.5]) {
-        mountingHole(holeOffset,holeOffset);
-        mountingHole(holeOffset+90,holeOffset);
-        mountingHole(holeOffset+90,holeOffset+90);
-        mountingHole(holeOffset,holeOffset+90);
+        pcbMountingHole(holeOffset,holeOffset);
+        pcbMountingHole(holeOffset+90,holeOffset);
+        pcbMountingHole(holeOffset+90,holeOffset+90);
+        pcbMountingHole(holeOffset,holeOffset+90);
     }
 }
 
-module mountingHole(x,y) {
+module pcbMountingHole(x,y) {
     translate([x,y,0]) {
         cylinder(d=4.5, h=depth-1.5);
     }
@@ -134,15 +150,44 @@ module caseMountingPost(x,y,height) {
 }
 
 module powerCableCutout() {
+    
+    // Power connector cutout
+    translate([-5, pcbYOffset,pcbPostHeight+8]) {
+        
+        // DC Jack
+        // Cut out both sides as the other can be used for LED cables
+        translate([0, 54,0]) {
+            
+            rotate([0,90,0]) {
+                #cylinder(d=12, h= width+10);
+            }
+        }
+    }
+        
     translate([-5, pcbYOffset,depth-8]) {
         
+        // DC Jack
         // Cut out both sides as the other can be used for LED cables
         translate([0, 50,0]) {
-            #cube([width+10,8,8.1]);
+            //#cube([width+10,8,8.1]);
         }
         
+        // terminal block
         translate([0, 69.8,0]) {
             #cube([width+10,4,8.1]);
+        }
+    }
+}
+
+module dustSensorCableCutout() {
+    translate([-5, pcbYOffset,depth-8]) {
+        
+        // DC Jack
+        // Cut out both sides as the other can be used for LED cables
+        translate([0, 80,0]) {
+            #cube([width+10,8,8.1]);
+            
+            
         }
     }
 }
@@ -180,6 +225,83 @@ module cutoutPrototypeArduino() {
     }
 }
 
+module fan40Hole(x,y) {
+    translate([x,y,0]) {
+        cylinder(d=4, h=8);
+    }
+}
+
+module fan40() {
+    translate([20,20,0]) {
+        cylinder(d=40, h=5);
+        fan40Hole(-17.8, -17.8);
+        fan40Hole(-17.8, 17.8);
+        fan40Hole(17.8, 17.8);
+        fan40Hole(17.8, -17.8);
+    }
+}
+
+
+
+module cutoutRearFan() {
+    // put in a 40mm fan. reference by lower left corner
+    translate([width/2-20, height/2-20, -0.1]) {
+        fan40() ;
+    }
+}
+
+module fan40Mount(x,y) {
+    translate([x, y, 0]) {
+        cylinder(d=8, h=6); 
+    }
+}
+
+module rearFanMounts() {
+    difference() {
+        union() {
+            translate([width/2, height/2, 0]) {
+                fan40Mount(-17.8, -17.8);
+                fan40Mount(-17.8, 17.8);
+                fan40Mount(17.8, 17.8);
+                fan40Mount(17.8, -17.8);
+            }
+        }
+        union() {
+            cutoutRearFan();
+        }
+    }
+}
+
+module cutoutCCS811Holes() {
+    translate([width/2, height-10, -0.1]) {
+        translate([(13/2), 0, 0]) {
+            cylinder(d=4.2, h=10);
+        }
+        translate([-(13/2), 0, 0]) {
+            cylinder(d=4.2, h=10);
+        }
+    }
+}
+
+module cCS811Mounts() {
+            
+    difference() {
+        union() {            
+            translate([width/2, height-10, 0]) {
+                translate([(13/2), 0, 0]) {
+                    cylinder(d=8, h=6);
+                }
+                translate([-(13/2), 0, 0]) {
+                    cylinder(d=8, h=6);
+                }
+            }
+        }
+        union() {
+           cutoutCCS811Holes();
+        }
+    }
+}
+
 module mainBody() {
     difference() {
         union() {
@@ -198,9 +320,15 @@ module mainBody() {
             
             sensorHole();
             
+            dustSensorCableCutout();
+            
             // TODO: Dust Sensor...
             
             cutoutPrototypeArduino();
+            
+            cutoutRearFan();
+            
+            cutoutCCS811Holes();
         }
     }
 }
@@ -208,3 +336,5 @@ module mainBody() {
 mainBody();
 pcbMountingPosts();
 caseMounts();
+cCS811Mounts();
+rearFanMounts();
