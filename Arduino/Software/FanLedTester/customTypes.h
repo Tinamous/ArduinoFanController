@@ -13,6 +13,10 @@ struct DisplayRangeType {
   float maxValue;
 
   int factor = 10;
+
+  // 0 = relative +/- the 12 O'Clock position
+  int mode = 0;
+
 };
 
 typedef DisplayRangeType displayRange_t;
@@ -31,6 +35,7 @@ typedef enum {
     Pomodoro = 10,
     PomodoroWorkOnly = 11,
     PomodoroPlayOnly = 12,
+    FixedColor = 13,
     Automatic = 255,
 } DisplayMode;
 

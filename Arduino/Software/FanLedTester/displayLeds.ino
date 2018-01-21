@@ -27,9 +27,6 @@ void SetLedsOnOff(bool newState) {
 void updateFansLeds() {
   int maxFan = 1;
   for (int fanId = 1; fanId <=maxFan; fanId++) {
-    Serial.print("Setting fan: ");
-    Serial.print(fanId);
-    Serial.println();
     showOuterValue(fanId);
     showNoseValue(fanId);
   }
@@ -38,6 +35,10 @@ void updateFansLeds() {
 void updateStrip1Leds(){}
 void updateStrip2Leds(){}
 
+// This is the final say in LED updates, it
+// can override all other changes. e.g. to turn off the LEDs
+// or to set the noses as red when the fans are starting up, or
+// something else...
 void endLedUpdate() {
    lastRedHourIndex = redHourIndex;
    redHourIndex++;
@@ -61,58 +62,58 @@ void endLedUpdate() {
 // Show value on fan's outer LEDs.
 // fanId: 1..4
 void showOuterValue(int fanId) {
-  Serial.print("Setting fan outer. Fan: ");
-  Serial.println(fanId);
-
-  int fanMode = fanModes[fanId-1];
-// 0: Ignore - manual
-// 1: Temperature 
-// 2: Humidity
-// 3: Pressure
-// 4: Air Quality
-// 5: Clock
-// 6: circle (single fan)
-// 7: circle (all fans)
-// 8: Dust
-// 10: Pomodoro (work + Play)
-// 11: Pomodoro Work
-// 12: Pomodoro Play
-// 255: Automatic
+  DisplayMode fanMode = fanDisplayModes[fanId-1];
 
   switch (fanMode) {
-    case 0:
+    case DisplayMode::Ignore:
       // No action. Manual control.
       break;
-    case 1:
+    case DisplayMode::Temperature:
       showTemperature(fanId);
       break;
-    case 2: 
+    case DisplayMode::Humidity:
       showHumidity(fanId);
       break;
-    case 3:
+    case DisplayMode::Pressure:
       showPressure(fanId);
       break;
-    case 4:
+    case DisplayMode::AirQuality:
       showAirQuality(fanId);
       break;
-    case 5:
+    case DisplayMode::Clock:
       showTime(fanId);
       break;
-    case 6: // circling
+    case DisplayMode::CircleSingleFan:
       showRunningClock(fanId);
       break;
-    case 7:
+    case DisplayMode::CircleAllFans:
       // TODO: Use all fans
       showRunningClock(fanId);
       break;
-    case 8:
+    case DisplayMode::Dust:
       showDust(fanId);
       break;
-    case 9:
+    case DisplayMode::Timer:
       showTimer(fanId);
       break;
-    case 255:
+    case DisplayMode::Pomodoro:
+      // TODO...
+      break;
+    case DisplayMode::PomodoroWorkOnly:
+    // TODO...
+      break;
+    case DisplayMode::PomodoroPlayOnly:
+    // TODO...
+      break;
+    case DisplayMode::FixedColor:
+      showFixedColor(fanId);
+      break;
+    case DisplayMode::Automatic:
       showAutomatic(fanId);
+      break;
+    default: 
+      // Blue nose: Not implemented
+      Serial.println("Unknown display mode");
       break;
   }
 }
@@ -120,42 +121,52 @@ void showOuterValue(int fanId) {
 // Use the fans "nose" to show a value. Uses all 4 LEDs.
 // Doesn't cycle.
 void showNoseValue(int fanId) {
-  Serial.print("Setting nose color. Fan: ");
-  Serial.println(fanId);
-
-  int fanMode = fanModes[fanId-1];
+  DisplayMode fanMode = fanDisplayModes[fanId-1];
 
   switch (fanMode) {
-    case 0:
+    case DisplayMode::Ignore:
       // No action. Manual control.
       break;
-    case 1:
+    case DisplayMode::Temperature:
       showNoseTemperature(fanId);
       break;
-    case 2:
+    case DisplayMode::Humidity:
       showNoseHumidity(fanId);
-       case 3:
+      break;
+     case DisplayMode::Pressure:
       showPressure(fanId);
       break;
-    case 4:
+    case DisplayMode::AirQuality:
       showAirQuality(fanId);
       break;
-    case 5:
+    case DisplayMode::Clock:
+      setNoseColor(fanId, CRGB::Black);
+      break;
+    case DisplayMode::CircleSingleFan:
       setNoseColor(fanId, CRGB::Green);
       break;
-    case 6: // circling
+    case DisplayMode::CircleAllFans:
       setNoseColor(fanId, CRGB::Green);
       break;
-    case 7:
-      setNoseColor(fanId, CRGB::Green);
-      break;
-    case 8:
+    case DisplayMode::Dust:
       showNoseDust(fanId);
       break;
-    case 9:
+    case DisplayMode::Timer:
       showNoseTimer(fanId);
       break;
-    case 255:
+    case DisplayMode::Pomodoro:
+      // TODO...
+      break;
+    case DisplayMode::PomodoroWorkOnly:
+      // TODO...
+      break;
+    case DisplayMode::PomodoroPlayOnly:
+      // TODO...
+      break;
+    case DisplayMode::FixedColor:
+      showNoseFixedColor(fanId);
+      break;
+    case DisplayMode::Automatic:
       showNoseAutomatic(fanId);
       break;
     default: 
@@ -164,8 +175,6 @@ void showNoseValue(int fanId) {
       break;
   }
 }
-
-
 
 // ----------------------------------
 // 1: Temperature display
@@ -176,36 +185,13 @@ void showTemperature(int fanId) {
   // *10 to avoid float usage
   int temperatureFactorised = temperature * temperatureRange.factor;
   
-  mapToFan(fanId, 
-    temperatureFactorised, 
-    temperatureRange);
-
-    /*
-    idealTemperature * temperatureFactor,
-    (int)(idealTemperatureRangeLow  * temperatureFactor), 
-    (int)(idealTemperatureRangeHigh  * temperatureFactor), 
-    (int)(minTemperature * temperatureFactor),
-    (int)(maxTemperature * temperatureFactor)
-    );
-    */
+  mapToFan(fanId, temperatureFactorised, temperatureRange);
 }
 
 void showNoseTemperature(int fanId) {
   int temperatureFactorised = temperature * temperatureRange.factor;
-  
-  // "Cold"
-  if (temperatureFactorised < temperatureRange.idealRangeLow) {
-    setNoseColor(fanId, CRGB::Blue);
-    return;  
-  } 
 
-  // "Hot"
-  if (temperatureFactorised > temperatureRange.idealRangeHigh ) {
-    setNoseColor(fanId, CRGB::Red);
-    return;
-  } 
-    
-  setNoseColor(fanId, CRGB::Green);
+  setGenericNose(fanId, temperatureFactorised, temperatureRange);
 }
 // ----------------------------------
 
@@ -214,11 +200,11 @@ void showNoseTemperature(int fanId) {
 // ----------------------------------
 
 void showHumidity(int fanId) {
-
+  mapToFan(fanId, (int)humidity, humidityRange);
 }
 
 void showNoseHumidity(int fanId) {
-
+  setGenericNose(fanId, (int)humidity, humidityRange);
 }
 
 // ----------------------------------
@@ -250,7 +236,37 @@ void showNoseAirQuality(int fanId) {
 // ----------------------------------
 
 void showTime(int fanId) {
-  //
+
+  int currentHour = rtc.getHours();
+  int currentMinute = rtc.getMinutes(); // 0-59
+
+  int hour = currentHour;
+  float factor = (12 / 60);
+  int minuteAsHour =  (currentMinute * 12)/60;
+  
+  Serial.print("Time: ");
+  Serial.print(currentHour);
+  Serial.print(":");
+  Serial.print(currentMinute);
+  Serial.print("  Minute as Led Hour: ");
+  Serial.print(minuteAsHour);
+  Serial.println();
+
+  CRGB color;
+  color.red = 0xEE;
+  color.green = 0xE8;
+  color.blue =  0x20;
+  
+  //setFanBackground(fanId, color);
+  setFanBackground(fanId, CRGB::Black);
+
+  // TODO: Handle hour and minuteAsHour when on the same LED.
+  if (hour == minuteAsHour) {
+    setLedByHour(fanId, hour, CRGB::Red);
+  } else {
+    setLedByHour(fanId, hour, CRGB::Green);
+    setLedByHour(fanId, minuteAsHour, CRGB::Blue);
+  } 
 }
 
 // ----------------------------------
@@ -307,6 +323,12 @@ void showNoseTimer(int fanId) {
 // 12: Pomodoro Play (0..5 mins)
 // ----------------------------------
 // TODO: Link to the work fan.
+
+// ----------------------------------
+// 13: Fixed Color
+// ----------------------------------
+void showFixedColor(int fanId) {}
+void showNoseFixedColor(int fanId) {}
 
 // ----------------------------------
 // 255: Automatic
@@ -381,8 +403,7 @@ void setLedHourRange(int fanId, int value, displayRange_t displayRange, int hour
   // light the whole circle for any value that represents
   // the single top digit.
   if (hour == 0 || hour == 12) {
-    Serial.print("Perfect match, lighting whole range");
-    // top digit
+    // top hour is lit, so make the whole thing good :-)
     setLedByHour(fanId, 0, color);
     // As it's bang on show the whole outline as the desired color.
     setFanBackground(fanId, color);
@@ -390,6 +411,24 @@ void setLedHourRange(int fanId, int value, displayRange_t displayRange, int hour
 }
 
 // --------------------------------
+
+// General routine for setting the nose color.
+// blue = below ideal range, red = above ideal range, green = ok.
+void setGenericNose(int fanId, int value, displayRange_t displayRange) {
+  // Low
+  if (humidity < displayRange.idealRangeLow) {
+    setNoseColor(fanId, CRGB::Blue);
+    return;  
+  } 
+
+  // High
+  if (humidity > displayRange.idealRangeHigh ) {
+    setNoseColor(fanId, CRGB::Red);
+    return;
+  } 
+    
+  setNoseColor(fanId, CRGB::Green);
+}
 
 // Set the color of the Nose (motor) of the fan
 void setNoseColor(int fanId, CRGB noseColor) {

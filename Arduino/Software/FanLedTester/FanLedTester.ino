@@ -1,3 +1,5 @@
+#include <RTCZero.h>
+
 #include <SparkFunCCS811.h>
 #include "customTypes.h"
 
@@ -33,9 +35,11 @@ int fan_speed_set[] = {0,0,0,0,0};
 // 10: Pomodoro (work + Play)
 // 11: Pomodoro Work
 // 12: Pomodoro Play
+// 13: Fixed Color
 // 255: Automatic
-// DisplayMode fanModes[] = {DisplayMode::Temperature, DisplayMode::Ignore, DisplayMode::Ignore, DisplayMode::Ignore};
-int fanModes[] = {1, 0, 0, 0};
+// TODO: Load this from EEPROM or something.
+// Let it be settable via MQTT/Alexa/////
+DisplayMode fanDisplayModes[] = {DisplayMode::Humidity, DisplayMode::Ignore, DisplayMode::Ignore, DisplayMode::Ignore};
 
 // User selected speed to set the fans to.
 int pwmSpeed = 255;
@@ -77,14 +81,7 @@ unsigned int ccsBaseline;
 unsigned int tVOC = 0;
 unsigned int eCO2 = 0;
 
-// Visualisation settings
-// temperature
-// 0 = relative, 1 = absolute.
-int temperatureMode = 0;
-// relative mode, +/- range of referece
-// absolute mode, reference is minimm
-int temperatureReference = 21;
-
+RTCZero rtc;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -96,16 +93,21 @@ void setup() {
 
   SetupNeopixels();
 
-  //Initialize serial:
-  Serial.begin(9600);
-  delay(5000);
-
   setFanBackground(1, CRGB::Yellow);
   setFanBackground(2, CRGB::Yellow);
   setFanBackground(3, CRGB::Yellow);
   setFanBackground(4, CRGB::Yellow);
 
+  //Initialize serial:
+  Serial.begin(9600);
+  delay(5000);
+
   setupTemperatureDisplayRange();
+  setupHumidityDisplayRange();
+
+  rtc.begin();
+  //rtc.setTime(04, 40, 20);
+  //rtc.setDate(21, 01, 2018);
   
   Serial.println("Fan LED Tester...");
   Serial.println("");
@@ -248,9 +250,11 @@ void readInput() {
         break;
       case '+':
         temperature +=0.25;
+        humidity +=2;
         break;
       case '-':
         temperature -=0.25;
+        humidity -=2;
         break;
       default:
         Serial.println("Unknown instruction. Select: 0..F, t, h, p, q");
@@ -263,6 +267,12 @@ void readInput() {
         break;
     }
   }
+
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.print(", Humidity: ");
+  Serial.print(humidity);
+  Serial.println();
 }
 
 
@@ -292,6 +302,23 @@ void setupTemperatureDisplayRange() {
   temperatureRange.maxValue = (idealValue + 2.5) * factor; 
 
   temperatureRange.factor = factor;
+}
+
+// Setup parameters for temperature display
+void setupHumidityDisplayRange() {
+  float idealValue = 55;
+  int factor = 1;
+  
+  humidityRange.idealValue = idealValue;
+  
+  humidityRange.idealRangeLow = 50; 
+  humidityRange.idealRangeHigh = 60; 
+
+  // +/- 6 segments on the display
+  humidityRange.minValue = 30;
+  humidityRange.maxValue = 70; 
+
+  humidityRange.factor = factor;
 }
 
 
