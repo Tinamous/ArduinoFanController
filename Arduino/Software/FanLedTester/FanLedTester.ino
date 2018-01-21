@@ -2,12 +2,6 @@
 #include "customTypes.h"
 
 #include <FastLED.h>
-//#include <WiFi101.h>
-//#include <Adafruit_MQTT.h>
-//#include <Adafruit_MQTT_Client.h>
-//#include <Adafruit_MQTT_FONA.h>
-
-
 
 // Pin Mappins
 int fan_pwm_pins[] = { 2, 3, 4, 5, 10}; // Was 6, now pin D10 - MISO
@@ -26,6 +20,23 @@ int fan_pulse_count[] = {0,0,0,0,0};
 int fan_computed_rpm[] = {0,0,0,0,0};
 int fan_speed_set[] = {0,0,0,0,0};
 
+
+// 0: Ignore - manual
+// 1: Temperature 
+// 2: Humidity
+// 3: Pressure
+// 4: Air Quality
+// 5: Clock
+// 6: circle (single fan)
+// 7: circle (all fans)
+// 8: Dust
+// 10: Pomodoro (work + Play)
+// 11: Pomodoro Work
+// 12: Pomodoro Play
+// 255: Automatic
+// DisplayMode fanModes[] = {DisplayMode::Temperature, DisplayMode::Ignore, DisplayMode::Ignore, DisplayMode::Ignore};
+int fanModes[] = {1, 0, 0, 0};
+
 // User selected speed to set the fans to.
 int pwmSpeed = 255;
 int fanMode = 3; // Fan mode. 0=Off, 1=Low, 2=Medium, 3=High 
@@ -36,8 +47,8 @@ bool master_power = false;
 // running LED Index, by "Hour" (0 top, 11 at 11 o'clock...)
 int redHourIndex = 0;
 int lastRedHourIndex = 0;
-
-int ledBrightness = 128;
+CRGB ledsSetColor = CRGB::Red;
+int ledBrightness = 200;
 
 //#define NUM_LEDS 24
 // 4 Fans, 16 LEDs per fan = 64
@@ -134,7 +145,16 @@ void loop() {
   delay(500);
 }
 
-CRGB ledsSetColor = CRGB::Red;
+// Loop handler to update the Neopixels (i.e. LED leds + possible others)
+// code for this is in the displayLeds file.
+void handleNeopixels() {
+  updateFansLeds();
+  //updateStrip1Leds();
+  //updateStrip2Leds();
+  endLedUpdate();
+
+  FastLED.show(); 
+}
   
 // ==============================================================
 // User input
@@ -245,193 +265,10 @@ void readInput() {
   }
 }
 
+
 // ==========================================================
-// Neopixel handling
+// Range setup
 // ==========================================================
-
-void SetLedsOnOff(bool newState) {
-  ledsEnabled = newState;
-  
-  if (ledsEnabled) {
-    Serial.println("All LEDs enabled.");
-  } else {
-    Serial.println("All LEDs off.");
-  }
-}
-
-// Loop handler to update the Neopixels (i.e. LED leds + possible others)
-void handleNeopixels() {
-  updateFansLeds();
-  //updateStrip1Leds();
-  //updateStrip2Leds();
-  endLedUpdate();
-
-  FastLED.show(); 
-}
-
-// 0: Ignore - manual
-// 1: Temperature 
-// 2: Humidity
-// 3: Pressure
-// 4: Air Quality
-// 5: Clock
-// 6: circle (single fan)
-// 7: circle (all fans)
-// 8: Dust
-// 10: Pomodoro (work + Play)
-// 11: Pomodoro Work
-// 12: Pomodoro Play
-// 255: Automatic
-// DisplayMode fanModes[] = {DisplayMode::Temperature, DisplayMode::Ignore, DisplayMode::Ignore, DisplayMode::Ignore};
-int fanModes[] = {1, 0, 0, 0};
-
-// Converts from a clock 'hour' position (0..12) (0==12 to make range lookup easier) to a led id (0..15, well 4..15)
-// This assumes the fan is placed so the wire exits top right....
-int fanOuterLedLookup[] = {14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 15, 14};
-
-// Convert the scale 0..11 to an "hour" position on the display.
-int normalisedHours[] = {7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6};
-
-void updateFansLeds() {
-  int maxFan = 1;
-  for (int fanId = 1; fanId <=maxFan; fanId++) {
-    Serial.print("Setting fan: ");
-    Serial.print(fanId);
-    Serial.println();
-    showOuterValue(fanId);
-    showNoseValue(fanId);
-  }
-}
-
-void updateStrip1Leds(){}
-void updateStrip2Leds(){}
-
-void endLedUpdate() {
-   lastRedHourIndex = redHourIndex;
-   redHourIndex++;
-
-    // run around the outer ring
-    // is the "hour" index rather than led id.
-    if (redHourIndex >= 12) {
-      redHourIndex = 0;
-    }
-
-    // Override any settings made to the LEDs to switch them off.
-    if (!ledsEnabled) {
-      FastLED.setBrightness( 0 );
-    } else {
-      FastLED.setBrightness( ledBrightness );
-    }
-}
-
-// --------------------------------------------------------
-
-// Show value on fan's outer LEDs.
-// fanId: 1..4
-void showOuterValue(int fanId) {
-  Serial.print("Setting fan outer. Fan: ");
-  Serial.println(fanId);
-
-  int fanMode = fanModes[fanId-1];
-// 0: Ignore - manual
-// 1: Temperature 
-// 2: Humidity
-// 3: Pressure
-// 4: Air Quality
-// 5: Clock
-// 6: circle (single fan)
-// 7: circle (all fans)
-// 8: Dust
-// 10: Pomodoro (work + Play)
-// 11: Pomodoro Work
-// 12: Pomodoro Play
-// 255: Automatic
-
-  switch (fanMode) {
-    case 0:
-      // No action. Manual control.
-      break;
-    case 1:
-      showTemperature(fanId);
-      break;
-    case 2: 
-      showHumidity(fanId);
-      break;
-    case 3:
-      showPressure(fanId);
-      break;
-    case 4:
-      showAirQuality(fanId);
-      break;
-    case 5:
-      showTime(fanId);
-      break;
-    case 6: // circling
-      showRunningClock(fanId);
-      break;
-    case 7:
-      // TODO: Use all fans
-      showRunningClock(fanId);
-      break;
-    case 8:
-      showDust(fanId);
-      break;
-    case 9:
-      showTimer(fanId);
-      break;
-    case 255:
-      showAutomatic(fanId);
-      break;
-  }
-}
-
-// Use the fans "nose" to show a value. Uses all 4 LEDs.
-// Doesn't cycle.
-void showNoseValue(int fanId) {
-  Serial.print("Setting nose color. Fan: ");
-  Serial.println(fanId);
-
-  int fanMode = fanModes[fanId-1];
-
-  switch (fanMode) {
-    case 0:
-      // No action. Manual control.
-      break;
-    case 1:
-      showNoseTemperature(fanId);
-      break;
-    case 2:
-      showNoseHumidity(fanId);
-       case 3:
-      showPressure(fanId);
-      break;
-    case 4:
-      showAirQuality(fanId);
-      break;
-    case 5:
-      setNoseColor(fanId, CRGB::Green);
-      break;
-    case 6: // circling
-      setNoseColor(fanId, CRGB::Green);
-      break;
-    case 7:
-      setNoseColor(fanId, CRGB::Green);
-      break;
-    case 8:
-      showNoseDust(fanId);
-      break;
-    case 9:
-      showNoseTimer(fanId);
-      break;
-    case 255:
-      showNoseAutomatic(fanId);
-      break;
-    default: 
-      // Blue nose: Not implemented
-      setNoseColor(fanId, CRGB::Blue);
-      break;
-  }
-}
 
 // Sensor display range settings.
 displayRange_t temperatureRange;
@@ -440,6 +277,7 @@ displayRange_t pressureRange;
 displayRange_t airQualityRange;
 displayRange_t dustRange;
 
+// Setup parameters for temperature display
 void setupTemperatureDisplayRange() {
   float idealValue = 20;
   int factor = 10;
@@ -455,193 +293,5 @@ void setupTemperatureDisplayRange() {
 
   temperatureRange.factor = factor;
 }
-
-// Desired temperature range display
-float idealTemperature = 20;
-
-float idealTemperatureRangeLow = idealTemperature- 1; 
-float idealTemperatureRangeHigh = idealTemperature + 1;
-
-// +/- 5 segments on the display (6 hour ignored).
-float minTemperature = idealTemperature-2.5; // each segment worth 0.5 C
-float maxTemperature = idealTemperature + 2.5;
-
-int temperatureFactor = 10;
-
-// ----------------------------------
-// 1: Temperature display
-// ----------------------------------
-
-void showTemperature(int fanId) {
-  // Map the desired value onto the fan surround.
-  // *10 to avoid float usage
-  
-  mapToFan(fanId, 
-    temperature * temperatureRange.factor, 
-    temperatureRange);
-
-    /*
-    idealTemperature * temperatureFactor,
-    (int)(idealTemperatureRangeLow  * temperatureFactor), 
-    (int)(idealTemperatureRangeHigh  * temperatureFactor), 
-    (int)(minTemperature * temperatureFactor),
-    (int)(maxTemperature * temperatureFactor)
-    );
-    */
-}
-
-void showNoseTemperature(int fanId) {
-  // if temperature is outside +/- 1 of the ideal temperature 
-  // then show the nose error.
-  int difference = temperature - idealTemperature;
-
-  Serial.print("Difference: ");
-  Serial.print(difference);
-
-  // Cold
-  if (temperature < idealTemperatureRangeLow) {
-    setNoseColor(fanId, CRGB::Blue);
-    return;  
-  } 
-
-  // Hot
-  if (temperature > idealTemperatureRangeHigh ) {
-    setNoseColor(fanId, CRGB::Red);
-    return;
-  } 
-    
-  setNoseColor(fanId, CRGB::Green);
-}
-// ----------------------------------
-
-// ----------------------------------
-// 2: Humidity Display
-// ----------------------------------
-
-void showHumidity(int fanId) {
-
-}
-
-void showNoseHumidity(int fanId) {
-
-}
-
-// ----------------------------------
-// 3: Pressure Display
-// ----------------------------------
-
-void showPressure(int fanId) {
-  
-}
-
-void showNosePressure(int fanId) {
-  
-}
-
-// ----------------------------------
-// 4: Air Quality Display
-// ----------------------------------
-
-void showAirQuality(int fanId) {
-  
-}
-
-void showNoseAirQuality(int fanId) {
-  
-}
-
-// ----------------------------------
-// 5: Time / clock
-// ----------------------------------
-
-void showTime(int fanId) {
-  //
-}
-
-// ----------------------------------
-// 6: Circle (single fan)
-// ----------------------------------
-
-void showRunningClock(int fanId) {
-  setLedByHour(fanId, lastRedHourIndex, CRGB::Blue);
-  setLedByHour(fanId, redHourIndex, CRGB::Red);
-}
-
-// ----------------------------------
-// 7: Circle (all fans)
-// ----------------------------------
-
-void showAllFansRunningClock(int fanId) {
-  //
-}
-
-// ----------------------------------
-// 8:Dust Display
-// ----------------------------------
-
-void showDust(int fanId) {
-  
-}
-
-void showNoseDust(int fanId) {
-
-}
-
-// ----------------------------------
-// 9: Timer
-// ----------------------------------
-
-void showTimer(int fanId) {
-  
-}
-
-void showNoseTimer(int fanId) {
-  
-}
-
-// ----------------------------------
-// 10: Pomodoro. Work (25min) + Play (5 min)
-// ----------------------------------
-
-// ----------------------------------
-// 11: Pomodoro Work only (0..25 mins)
-// ----------------------------------
-// TODO: Link to the play fan.
-
-// ----------------------------------
-// 12: Pomodoro Play (0..5 mins)
-// ----------------------------------
-// TODO: Link to the work fan.
-
-// ----------------------------------
-// 255: Automatic
-// ----------------------------------
-// Automatic - show which ever measurement needs attemption
-void showAutomatic(int fanId) {
-  
-}
-
-void showNoseAutomatic(int fanId) {
-  // Color code the nose to indicate which parameter.
-}
-
-// ----------------------------------
-
-
-
-// Hot
-DEFINE_GRADIENT_PALETTE( green_to_red_palette ) {
-    0, 0x00, 0xFF, 0x00,
-  255, 0xFF, 0x00, 0x00};
-  
-CRGBPalette16 rgPalette = green_to_red_palette;
-
-// Cold
-DEFINE_GRADIENT_PALETTE( green_to_blue_palette ) {
-    0,   0, 0,  0,
-   95, 255, 255, 0,
-  255, 255, 0,0};
-
-
 
 
