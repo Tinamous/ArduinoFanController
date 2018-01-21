@@ -1,5 +1,6 @@
 #include "customTypes.h"
 #include <FastLED.h>
+#include <Math.h>
 
 
 // Converts from a clock 'hour' position (0..12) (0==12 to make range lookup easier) to a led id (0..15, well 4..15)
@@ -8,6 +9,10 @@ int fanOuterLedLookup[] = {14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 15, 14};
 
 // Convert the scale 0..11 to an "hour" position on the display.
 int normalisedHours[] = {7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6};
+
+// Convert the scale 0..22 to an "hour" position on the display.
+// this allows the full face to be used (1... 12[0] for low then 12[0].. 11 for high.
+int normalisedHoursFullScale[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 
 
 // ==========================================================
@@ -224,11 +229,11 @@ void showNosePressure(int fanId) {
 // ----------------------------------
 
 void showAirQuality(int fanId) {
-  
+   mapToFan(fanId, eCO2, airQualityRange);
 }
 
 void showNoseAirQuality(int fanId) {
-  
+  setGenericNose(fanId, (int)eCO2, airQualityRange);
 }
 
 // ----------------------------------
@@ -352,6 +357,15 @@ void showNoseAutomatic(int fanId) {
 void mapToFan(int fanId, int value, displayRange_t displayRange) {
   // The hour on the clock the value represents
   int hour = getRangeHour(value, displayRange.minValue, displayRange.maxValue);
+  Serial.print("Hour:");
+  Serial.print(hour);
+  Serial.print(", Max:");
+  Serial.print(displayRange.maxValue);
+  Serial.print(", Min:");
+  Serial.print(displayRange.minValue);
+
+  Serial.println();
+  
 
   // Set all the LEDs to the background color
   // then set just the ones appropriate.
@@ -364,18 +378,26 @@ void mapToFan(int fanId, int value, displayRange_t displayRange) {
 
 // Get the value as an hour on the clock face.
 int getRangeHour(int value, int minValue, int maxValue) {
-  
+
+  // Assumes full scale on the clock (0, 1, 2..11 and 0, 11, 10..1
   if (value > maxValue) {
-    return 6;  
+    Serial.println("Above max");
+    return 11;  
   } else if (value < minValue) {
-    return 6;
+    Serial.println("below min");
+    return 1;
   } else {
     // Convert it to a scale of 0..11 for hour lookup
-    int hourIndex = map(value, minValue, maxValue, 0, 11);
+    //int hourIndex = map(value, minValue, maxValue, 0, 11);
 
     // Convert from a 0..11 value from the map
     // into am hour value (12 O'Clock +/- 6 hours)
-    return normalisedHours[hourIndex];
+    //return normalisedHours[hourIndex];
+
+    // map doesn't do floats nicely. e.g. 15.95 -> 15.
+    int hourIndex = map(value* 100, minValue * 100, maxValue * 100, 0*100, 22*100);
+    hourIndex = round(hourIndex  / 100.0);
+    return normalisedHoursFullScale[hourIndex];
   }
 }
 
@@ -416,13 +438,13 @@ void setLedHourRange(int fanId, int value, displayRange_t displayRange, int hour
 // blue = below ideal range, red = above ideal range, green = ok.
 void setGenericNose(int fanId, int value, displayRange_t displayRange) {
   // Low
-  if (humidity < displayRange.idealRangeLow) {
+  if (value < displayRange.idealRangeLow) {
     setNoseColor(fanId, CRGB::Blue);
     return;  
   } 
 
   // High
-  if (humidity > displayRange.idealRangeHigh ) {
+  if (value > displayRange.idealRangeHigh ) {
     setNoseColor(fanId, CRGB::Red);
     return;
   } 
@@ -461,16 +483,6 @@ void setLed(int fanId, int ledId, CRGB color) {
   int ledIndex = (16 * (fanId-1)) + ledId;
   leds[ledIndex] = color;
   return;
-  
-  Serial.print("Setting LED: ");
-  Serial.print(ledIndex);
-  Serial.print(" (Fan: ");
-  Serial.print(fanId);
-  Serial.print(" ,Led: ");
-  Serial.print(ledId);
-  Serial.print(") to: ");
-  Serial.print(color, HEX);
-  Serial.println();
 }
 
 // Helpers
@@ -488,13 +500,7 @@ void setLed(int fanId, int ledId, CRGB color) {
 // RainbowStripeColors_p
 // PartyColors_p
 // HeatColors_p
-CRGB getRangeColor(int value, displayRange_t displayRange) {// int idealRangeMin, int idealRangeMax, int minValue, int maxValue) {
-    // Map the value to the heat index (0..255) range.
-  //uint8_t heatIndex = map(value, minValue, maxValue, 0, 254);
-  //Serial.print("heatIndex: ");
-  //Serial.print(heatIndex);
-  //Serial.println();
-    
+CRGB getRangeColor(int value, displayRange_t displayRange) {// int idealRangeMin, int idealRangeMax, int minValue, int maxValue) {  
   // See
   // CRGB color = ColorFromPalette(HeatColors_p, heatIndex);
   if (value > displayRange.idealRangeHigh) { 
@@ -530,3 +536,4 @@ CRGB getBackgroundColor(int fanId, int value, displayRange_t displayRange) {// i
   return color;
   //return CRGB::Yellow;
 }
+

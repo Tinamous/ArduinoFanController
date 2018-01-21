@@ -72,16 +72,23 @@ bool hasCCS811 = false;
 
 // BME 280 (or 680)
 // Guess at appropriate values whilst not available to be read.
-float humidity = 40;
+float humidity = 50;
 float temperature = 22;
 
 // CCS811
 long ccs811DataUsableAfter;
 unsigned int ccsBaseline;
 unsigned int tVOC = 0;
-unsigned int eCO2 = 0;
+unsigned int eCO2 = 400;
 
 RTCZero rtc;
+
+// Sensor display range settings.
+displayRange_t temperatureRange;
+displayRange_t humidityRange;
+displayRange_t pressureRange;
+displayRange_t airQualityRange;
+displayRange_t dustRange;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -102,8 +109,9 @@ void setup() {
   Serial.begin(9600);
   delay(5000);
 
-  setupTemperatureDisplayRange();
-  setupHumidityDisplayRange();
+  temperatureRange = setupTemperatureDisplayRange();
+  humidityRange = setupHumidityDisplayRange();
+  airQualityRange = setupAirQualityDisplayRange();
 
   rtc.begin();
   //rtc.setTime(04, 40, 20);
@@ -251,10 +259,12 @@ void readInput() {
       case '+':
         temperature +=0.25;
         humidity +=2;
+        eCO2 +=100;
         break;
       case '-':
         temperature -=0.25;
         humidity -=2;
+        eCO2 -=100;
         break;
       default:
         Serial.println("Unknown instruction. Select: 0..F, t, h, p, q");
@@ -272,6 +282,8 @@ void readInput() {
   Serial.print(temperature);
   Serial.print(", Humidity: ");
   Serial.print(humidity);
+  Serial.print(", eCO2: ");
+  Serial.print(eCO2);
   Serial.println();
 }
 
@@ -280,45 +292,66 @@ void readInput() {
 // Range setup
 // ==========================================================
 
-// Sensor display range settings.
-displayRange_t temperatureRange;
-displayRange_t humidityRange;
-displayRange_t pressureRange;
-displayRange_t airQualityRange;
-displayRange_t dustRange;
-
 // Setup parameters for temperature display
-void setupTemperatureDisplayRange() {
+displayRange_t setupTemperatureDisplayRange() {
   float idealValue = 20;
   int factor = 10;
+
+  displayRange_t range;
+  range.idealValue = idealValue * factor;
   
-  temperatureRange.idealValue = idealValue * factor;
-  
-  temperatureRange.idealRangeLow = (idealValue - 1) * factor; 
-  temperatureRange.idealRangeHigh = (idealValue + 1) * factor; 
+  range.idealRangeLow = (idealValue - 1) * factor; 
+  range.idealRangeHigh = (idealValue + 1) * factor; 
 
   // +/- 6 segments on the display
-  temperatureRange.minValue = (idealValue - 2.5) * factor;  // each segment worth 0.5 C
-  temperatureRange.maxValue = (idealValue + 2.5) * factor; 
+  range.minValue = (idealValue - 2.5) * factor;  // each segment worth 0.5 C
+  range.maxValue = (idealValue + 2.5) * factor; 
 
-  temperatureRange.factor = factor;
+  range.factor = factor;
+  return range;
 }
 
-// Setup parameters for temperature display
-void setupHumidityDisplayRange() {
+// Setup parameters for humidity display
+displayRange_t setupHumidityDisplayRange() {
+  
   float idealValue = 55;
   int factor = 1;
-  
-  humidityRange.idealValue = idealValue;
-  
-  humidityRange.idealRangeLow = 50; 
-  humidityRange.idealRangeHigh = 60; 
 
-  // +/- 6 segments on the display
-  humidityRange.minValue = 30;
-  humidityRange.maxValue = 70; 
+  displayRange_t range;
+  range.idealValue = idealValue;
+  
+  range.idealRangeLow = idealValue - 5; 
+  range.idealRangeHigh = idealValue + 5; 
 
-  humidityRange.factor = factor;
+  // this needs to be symmetrical either wide of 
+  // the ideal value (at-least until the display 
+  // can support it.)
+  range.minValue = idealValue - 45; // 10%
+  range.maxValue = idealValue + 45; // 100%
+
+  range.factor = factor;
+  return range;
 }
+
+// Setup parameters for air quality display
+// this is different to temp/humidity in that
+// it's only the upper range that matters.
+displayRange_t setupAirQualityDisplayRange() {
+  float idealValue = 0;
+  int factor = 1;
+
+  displayRange_t range;
+  range.idealValue = idealValue;
+  
+  range.idealRangeLow = 0; 
+  range.idealRangeHigh = 1000; 
+
+  range.minValue = 0;
+  range.maxValue = 2500; 
+
+  range.factor = factor;
+  return range;
+}
+
 
 
