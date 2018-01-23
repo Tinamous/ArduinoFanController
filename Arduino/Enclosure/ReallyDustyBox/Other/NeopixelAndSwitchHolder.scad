@@ -4,8 +4,11 @@ $fn=100;
 neoPixelDepth=3.2; // 3.1 (round as .5)
 depth = 6;
 switchCutoutDiameter = 29;
-outerDiameter = 68.5;
-outerDiameter = 73;
+//outerDiameter = 68.5; // When circular
+outerDiameter = 73; // When 12 sided
+
+neoPixelRingOuter = 66.6;
+neoPixelRingInner = 52.2;
 
 module neoPixelRing(outer, inner, height) {
     difference() {
@@ -38,7 +41,6 @@ module neoPixelWires() {
     }
 }
 
-
 module main() {
     difference() {
         union() {
@@ -51,7 +53,7 @@ module main() {
                 neoPixelWires();
                 
                 translate([0,0,depth - neoPixelDepth]) {
-                    neoPixelRing(65.6, 52, neoPixelDepth);
+                    neoPixelRing(neoPixelRingOuter, neoPixelRingInner, neoPixelDepth);
 
                     translate([0,0,-1.5]) {
                         // recess for wires.

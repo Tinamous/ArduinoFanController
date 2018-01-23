@@ -5,9 +5,10 @@
 //holeOffset = 7.5;
 
 // 140mm fan
-width = 140;
-height = 140;
-holeOffset = 7.5;
+width = 150;
+height = 150;
+fanDiameter = 140;
+holeOffset = 12.5; // for a 140 fan with a 140 base.
 coneHeight = 40;
 
 echo("fan width",width );
@@ -70,12 +71,12 @@ module roundedCube(width, height, depth, cornerRadius) {
 module fanMount() {
     difference() {
         union(){
-            roundedCube(width,height,4, 8);
+            roundedCube(width,height,3, 8);
         }
         union() {
             
             translate([width/2, height/2, -0.01]) {
-                cylinder(d=width-4, h=4.1);
+                cylinder(d=fanDiameter-4, h=4.1);
             }
             
             mountingHoles(holeOffset);
@@ -83,54 +84,67 @@ module fanMount() {
     }
 }
 
-module filterMount() {
-    difference() {
-        union(){
-            translate([width/2, height/2, 0]) {
-                cylinder(d=width, h=8);
-            }
-            
-            // Add a cone onto the end to make the bridging required to be printed
-            // a lot more managagle.
-            translate([(width/2), (height/2), 8]) {
-                cylinder(d1=width,d2=ductSize, h=coneHeight);
-            }        
-            
-            translate([width/2, height/2, coneHeight + 8]) {
-                cylinder(d=ductSize, h=20);
-            }    
+module hulled(diameter, ductWidth, ductHeight) {
+    
+    hull() {
+        translate([width/2, height/2, 0]) {
+            cylinder(d=diameter, h=8);
         }
-        union() {
-            translate([(width/2), (height/2), -0.01]) {
-                cylinder(d=width-4, h=8.02);
-            }            
-            
-            translate([(width/2), (height/2), 8-0.01]) {
-                cylinder(d1=width-4,d2=ductSize-4, h=coneHeight + 0.02);
-            }            
-            
-            translate([(width/2), (height/2), coneHeight + 8]) {
-                cylinder(d=ductSize-4, h=20.1);
-            } 
+        translate([(width-ductWidth)/2, (height-ductHeight)/2, 60]) {
+            cube([ductWidth,ductHeight,1]);
+        }
+    }
+    translate([(width-ductWidth)/2, (height-ductHeight)/2, 60]) {
+            cube([ductWidth,ductHeight,10]);
+    }
+}
+
+module hollowHull() {
+    
+diameter = fanDiameter;
+    
+// For the vent to drop into.
+// These are OUTER measurements of the duct.
+ductWidth = 107; // 106.0
+ductHeight = 51; // 49.9
+    
+    difference() {
+        hulled(diameter, ductWidth+4, ductHeight+4);
+        translate([0, 0, 0]) {
+            hulled(diameter-4,ductWidth, ductHeight);
         }
     }
 }
 
 module mountingHoles(holeOffset) {
-    mountingHole(holeOffset,holeOffset);
-    mountingHole(width-holeOffset,holeOffset);
-    mountingHole(width-holeOffset,height-holeOffset);
-    mountingHole(holeOffset,height-holeOffset);
+    // 2 large hoes to go around the fan mount strew
+    // so the fan can stay attached. then 2 small
+    // to run the fan bold through
+    mountingHole(holeOffset,holeOffset, 11);
+    mountingHole(width-holeOffset,holeOffset, 5);
+    mountingHole(width-holeOffset,height-holeOffset, 10);
+    mountingHole(holeOffset,height-holeOffset,5);
 }
 
-module mountingHole(x,y) {
+module mountingHole(x,y, d) {
     translate([x,y,-0.1]) {
-        #cylinder(d=5, h=5);
+        #cylinder(d=d, h=5);
     }
 }
 
+module showDuct() {
+    // For the vent to drop into.
+// These are OUTER measurements of the duct.
+ductWidth = 107; // 106.0
+ductHeight = 51; // 49.9
+    translate([(width-ductWidth)/2, (height-ductHeight)/2, 50]) {
+            %cube([ductWidth,ductHeight,50]);
+    }
+}
+
+showDuct();
+
 union() {
     fanMount();
-    filterMount();
-        
+    hollowHull();       
 }

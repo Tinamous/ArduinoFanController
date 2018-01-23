@@ -17,18 +17,18 @@ $fn=180;
 // Inside Filter Retainer: Depth = 2mm, isInsideFrame = true
 // Outside Filter Frame: Depth = 20mm, isInsideFrame = false
 
-// 3mm for frame thickness, 20mm to hold the 25mm deep filter.
-depth = 20;
+// 3mm for frame thickness (allow depth of M3 counter sink screw.
+depth = 3;
 
 // Inside mouting frame has extra holes
 // to hold it in place when the outside filter
 // is removed for cleaning.
 
 // true for inside frame, false for outside frame.
-isInsideFrame = true;
+isInsideFrame = false;
 
-holesDown = 6;
-holesAcross = 6;
+holesDown = 3;
+holesAcross = 3;
 
 
 module noCornersCube(width, height, depth, cornerRadius) {
@@ -77,15 +77,17 @@ module roundedCube(width, height, depth, cornerRadius) {
     }
 }
 
+insideFanSize = 185;
+
 module mainFrame() {
-    yOffset = 12;
+    yOffset = 6;
     availableHoleHeight = height-(2*yOffset);
     echo("availableHoleHeight",availableHoleHeight);
     holeHeight = (availableHoleHeight/holesDown);
     echo("holeHeight",holeHeight);
     
     
-    xOffset = 12;
+    xOffset = 6;
     echo("width",width);
     availableHoleWidth = width-(2*xOffset);
     echo("availableHoleWidth",availableHoleWidth);
@@ -99,16 +101,17 @@ module mainFrame() {
         }
         union() {
             mountingHoles();
-            
-            translate([3,3,2]) {
-                //cube  ([width-6,height-6,depth-2.99]);
-                roundedCube(width-6,height-6,depth, 4);
-            }
-                        
+                                  
             // Hollow out the main body.
             translate([xOffset,yOffset,-0.1]) {
                 //cube  ([width-6,height-6,depth-2.99]);
                 roundedCube(width-(2*xOffset),height-(2*yOffset),depth+0.2, 4);
+            }
+            
+            // Hollow out leaving a 3mm outer frame 
+            translate([3,3,2]) {
+                //cube  ([width-6,height-6,depth-2.99]);
+                roundedCube(width-6,height-6,depth, 4);
             }
         }
     }
@@ -134,14 +137,32 @@ module mountingHoles() {
     mountingHole(width-6,height-6);
     mountingHole(6,height-6);
     
-    mountingHole(6,height/2);
-    mountingHole(width-6,height/2);
+    // Use these holes to screw the filter frame
+    // into the other frame (inside/outside)?
+    #smallMountingHole(6,height/2);
+    #smallMountingHole(width-6,height/2);
     
+    // These holes are for the inside frame to be screwed to the 
+    // box to keep it in place when the outside frame is removed.
     if (isInsideFrame) {
         ReverseMountinghole(width/2,8);
         ReverseMountinghole(width/2,height -8);
     }
 }
+
+module smallMountingHole(x,y) {
+    translate([x,y,-0.1]) {
+        // Hole should be big enough for an M4 heat fit insert
+        // and also for a normal M4 bolt to pass through.
+        // Inside will have heat fit inserts in the "top"
+        // outside counter sunk bold goes through to the inside
+        cylinder(d=3.5, h=depth+2);
+        
+        // Countersink...
+        cylinder(d1=6, d2=3.5, h=3);
+    }
+}
+
 
 module mountingHole(x,y) {
     translate([x,y,-0.1]) {
@@ -152,7 +173,7 @@ module mountingHole(x,y) {
         cylinder(d=5.2, h=depth+2);
         
         // Countersink...
-        #cylinder(d1=8.5, d2=5, h=3);
+        cylinder(d1=8.5, d2=5, h=3);
     }
 }
 
@@ -184,6 +205,10 @@ module mountingPoints() {
     
 }
 
+fanHoleDistance = 154;
+//fanHoleDistance = 170;
+halfFanHoleDistance = fanHoleDistance/2;
+
 
 module mountingPoint(x,y) {
     translate([x,y,0]) {
@@ -202,42 +227,7 @@ module ReverseMountingPoint(x,y) {
     }
 }
 
-module holeDrillingTemplate() {
-    // mounting points.
-    color("blue") {
-        circleAt(6, 6, 4.5);
-        circleAt(width-6, 6, 4.5);
-        circleAt(width-6, height-6, 4.5);
-        circleAt(6, height-6, 4.5);
-        
-        circleAt(6, height/2, 4.5);
-        circleAt(width-6, height/2, 4.5);
-    }
-    
-    yOffset = 12;
-    availableHoleHeight = height-(2*yOffset);
-    echo("availableHoleHeight",availableHoleHeight);
-    holeHeight = (availableHoleHeight/holesDown);
-    echo("holeHeight",holeHeight);
-    
-    
-    // Big holes for air...
-    xOffset = 12;
-    echo("width",width);
-    availableHoleWidth = width-(2*xOffset);
-    echo("availableHoleWidth",availableHoleWidth);
-    holeWidth = availableHoleWidth/holesAcross;
-    echo("holeWidth", holeWidth);
-    
-    // Hole drilling template.
-    for(y = [yOffset : holeHeight : availableHoleHeight]) {
-        for(x = [xOffset : holeWidth : availableHoleWidth]) {
-                centerX = x + (holeWidth/2)+1;
-                centerY = y + (holeHeight/2)+1;
-                color("red") circleAt(centerX, centerY, 2);
-        }
-    }
-}
+
 
 module circleAt(x,y, size) {
     echo("Hole at", x, y);

@@ -7,14 +7,14 @@
 
 width = 120;
 height = 120;
-depth = 32;
+depth = 38;
 
 // If the Arduino is face up
 faceUp = true;
 
 // 5mm posts to have the Arduino facing up (sampling outside the box) (faceUp = true)
 // 25mm posts for Arduino face down (sampling inside the box) (faceUp = false)
-pcbPostHeight = 7.5;
+pcbPostHeight = 8.5;
 
 // PCB is 100x100
 pcbXOffset = (width - 100)/2;
@@ -152,14 +152,14 @@ module caseMountingPost(x,y,height) {
 module powerCableCutout() {
     
     // Power connector cutout
-    translate([-5, pcbYOffset,pcbPostHeight+8]) {
+    translate([width-5, pcbYOffset,pcbPostHeight+8]) {
         
         // DC Jack
         // Cut out both sides as the other can be used for LED cables
         translate([0, 54,0]) {
             
             rotate([0,90,0]) {
-                #cylinder(d=12, h= width+10);
+                #cylinder(d=12, h= 10);
             }
         }
     }
@@ -227,21 +227,32 @@ module cutoutPrototypeArduino() {
 
 module fan40Hole(x,y) {
     translate([x,y,0]) {
-        cylinder(d=4, h=8);
+        #cylinder(d=4, h=3);
+    }
+    translate([x,y,2]) {
+        #cylinder(d1=4,d2=8, h=3.1);
     }
 }
 
+// 40mm fan mounted on the base of the box to draw outside 
+// air over the arduino / sensor setup.
 module fan40() {
     translate([20,20,0]) {
-        cylinder(d=40, h=5);
-        fan40Hole(-17.8, -17.8);
-        fan40Hole(-17.8, 17.8);
-        fan40Hole(17.8, 17.8);
-        fan40Hole(17.8, -17.8);
+        // Fan
+        cylinder(d=35, h=5);
+        
+        // mounting holes.
+        fan40Hole(-16, -16);
+        fan40Hole(-16, 16);
+        fan40Hole(16, 16);
+        fan40Hole(16, -16);
+        
+        // Fan cable...
+        translate([-20, -10, -0.1]) {
+            #cube([6, 4, 3]);
+        }
     }
 }
-
-
 
 module cutoutRearFan() {
     // put in a 40mm fan. reference by lower left corner
@@ -252,7 +263,7 @@ module cutoutRearFan() {
 
 module fan40Mount(x,y) {
     translate([x, y, 0]) {
-        cylinder(d=8, h=6); 
+        cylinder(d=8, h=3); 
     }
 }
 
@@ -260,10 +271,10 @@ module rearFanMounts() {
     difference() {
         union() {
             translate([width/2, height/2, 0]) {
-                fan40Mount(-17.8, -17.8);
-                fan40Mount(-17.8, 17.8);
-                fan40Mount(17.8, 17.8);
-                fan40Mount(17.8, -17.8);
+                fan40Mount(-16, -16);
+                fan40Mount(-16, 16);
+                fan40Mount(16, 16);
+                fan40Mount(16, -16);
             }
         }
         union() {
@@ -272,13 +283,22 @@ module rearFanMounts() {
     }
 }
 
+ccs811YPosition = height-17;
+
 module cutoutCCS811Holes() {
-    translate([width/2, height-10, -0.1]) {
+    translate([width/2, ccs811YPosition, -0.1]) {
         translate([(13/2), 0, 0]) {
             cylinder(d=4.2, h=10);
         }
         translate([-(13/2), 0, 0]) {
             cylinder(d=4.2, h=10);
+        }
+        
+        // cutout for cable/connector
+        // normally wouldn't need to be this big bit
+        // I've solderede headers onto my breakout board.
+        translate([-(19/2), +11.25, 0]) {
+            #cube([19, 4, 6]);
         }
     }
 }
@@ -287,7 +307,7 @@ module cCS811Mounts() {
             
     difference() {
         union() {            
-            translate([width/2, height-10, 0]) {
+            translate([width/2, ccs811YPosition, 0]) {
                 translate([(13/2), 0, 0]) {
                     cylinder(d=8, h=6);
                 }
@@ -298,6 +318,31 @@ module cCS811Mounts() {
         }
         union() {
            cutoutCCS811Holes();
+        }
+    }
+}
+
+// Show the hole position for a small cutout
+// for the BME680 
+module showBME680Cutout() {
+    // hole offset from PCB edge is 5mm.
+    //holeOffset = 5;
+        
+    translate([pcbXOffset, pcbYOffset +100, 0]) {
+        // now at top left corner of the PCB which is where
+        // all the PCB measurements are made from
+        
+        // pin one offset + bme680 offset to pin 1.
+        xOffset = 40.01 + 10.8;
+        yOffset = 23.48 + 15.88;
+        
+        //xOffset = 40.01 + 10.8;
+        //yOffset = 23.48 + 15.88;
+        echo ("BME680 xOffset",xOffset);
+        echo ("BME680 yOffset", -yOffset);
+        
+        translate([xOffset, -yOffset, 0]) {
+            cylinder(d=2, h=110);
         }
     }
 }
@@ -338,3 +383,5 @@ pcbMountingPosts();
 caseMounts();
 cCS811Mounts();
 rearFanMounts();
+
+showBME680Cutout();
