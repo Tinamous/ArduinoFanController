@@ -30,7 +30,7 @@ void SetLedsOnOff(bool newState) {
 }
 
 void updateFansLeds() {
-  int maxFan = 1;
+  int maxFan = 4;
   for (int fanId = 1; fanId <=maxFan; fanId++) {
     showOuterValue(fanId);
     showNoseValue(fanId);
@@ -52,6 +52,14 @@ void endLedUpdate() {
     // is the "hour" index rather than led id.
     if (redHourIndex >= 12) {
       redHourIndex = 0;
+    }
+
+    // Check each of the fan speeds and show a red
+    // nose if the speed is low.
+    // Enable some point in the future when fans
+    // are runnable.
+    for (int fanId = 1; fanId <=4; fanId++) {
+      showFanSpeedLowError(fanId);
     }
 
     // Override any settings made to the LEDs to switch them off.
@@ -113,6 +121,12 @@ void showOuterValue(int fanId) {
     case DisplayMode::FixedColor:
       showFixedColor(fanId);
       break;
+    case DisplayMode::SelectedFanSpeed:
+      showFanSelectedSpeed(fanId);
+      break;
+    case DisplayMode::FanSpeed:
+      showFanRpmSpeed(fanId);
+      break;
     case DisplayMode::Automatic:
       showAutomatic(fanId);
       break;
@@ -139,10 +153,10 @@ void showNoseValue(int fanId) {
       showNoseHumidity(fanId);
       break;
      case DisplayMode::Pressure:
-      showPressure(fanId);
+      showNosePressure(fanId);
       break;
     case DisplayMode::AirQuality:
-      showAirQuality(fanId);
+      showNoseAirQuality(fanId);
       break;
     case DisplayMode::Clock:
       setNoseColor(fanId, CRGB::Black);
@@ -170,6 +184,13 @@ void showNoseValue(int fanId) {
       break;
     case DisplayMode::FixedColor:
       showNoseFixedColor(fanId);
+      break;
+    case DisplayMode::SelectedFanSpeed:
+      // red/green for in range.
+      showNoseFanSpeed(fanId); 
+      break;
+    case DisplayMode::FanSpeed:
+      showNoseFanSpeed(fanId);
       break;
     case DisplayMode::Automatic:
       showNoseAutomatic(fanId);
@@ -233,7 +254,7 @@ void showAirQuality(int fanId) {
 }
 
 void showNoseAirQuality(int fanId) {
-  setGenericNose(fanId, (int)eCO2, airQualityRange);
+  setGenericNose(fanId, eCO2, airQualityRange);
 }
 
 // ----------------------------------
@@ -332,8 +353,110 @@ void showNoseTimer(int fanId) {
 // ----------------------------------
 // 13: Fixed Color
 // ----------------------------------
-void showFixedColor(int fanId) {}
-void showNoseFixedColor(int fanId) {}
+void showFixedColor(int fanId) {
+  CRGB color = fanInfos[fanId].outerColor;
+  setFanBackground(fanId, color);
+}
+
+void showNoseFixedColor(int fanId) {
+  CRGB color = fanInfos[fanId].noseColor; 
+  setNoseColor(fanId, color);
+}
+
+// ----------------------------------
+// 243: Fan Selected Speed
+// ----------------------------------
+void showFanSelectedSpeed(int fanId) {
+  // 0..11 - directly maps to the hour.
+  int speed = fanInfos[fanId].speedSet;
+
+  setFanBackground(fanId, CRGB::Blue);
+
+  for (int i = 0; i<=speed; i++) {
+    setLedByHour(fanId, i, CRGB::Green);
+  }
+}
+
+// ----------------------------------
+// 244: Fan Speed
+// ----------------------------------
+void showFanRpmSpeed(int fanId) {
+  displayRange_t displayRange = setupFanDisplayRange(fanId);
+  int rpm = fanInfos[fanId].computedRpm;
+  mapToFan(fanId, rpm, displayRange);
+}
+
+void showNoseFanSpeed(int fanId) {
+  // Default to green...
+  setNoseColor(fanId, CRGB::Green);
+  
+  // but show an error if the speed is low.
+  showFanSpeedLowError(fanId);
+}
+
+// If the fan has a speed error light up the nose
+// a bright red color, otherwise leave it as is.
+void showFanSpeedLowError(int fanId) {
+ 
+  // If the power is off then ignore any fan speed setting.
+  if (!master_power) {
+    return;
+  }
+
+  // If fan is stopped then ignore.
+  int selectedSpeed = fanInfos[fanId].speedSet;
+  if (selectedSpeed == 0) {
+    return;
+  }
+
+  if (!fanInfos[fanId].enabled) {
+    return;
+  }
+ 
+  int rpm = fanInfos[fanId].computedRpm;
+  // Expect the rpm to be at-least that of the speed below the
+  // currentl selected one.  
+  int minRpm = fanInfos[fanId].expectedRpm[selectedSpeed-1];
+
+  if (rpm < minRpm) {
+    Serial.print("Fan ");
+    Serial.print(fanId);
+    Serial.print(" RPM below range. Making a red nose.");
+    Serial.println();
+    setNoseColor(fanId, CRGB::Red);
+  }  
+}
+
+displayRange_t setupFanDisplayRange(int fanId) {
+
+  fanInfo_t fanInfo = fanInfos[fanId];
+  
+  // Ideal value depends on the fan PWM.
+  // Min/Max depend on the fan...
+  displayRange_t range;
+  range.idealValue = fanInfo.expectedRpm[fanInfo.speedSet]; // lookup fan/ fan run mode.
+  
+  if (fanInfo.speedSet > 0) {
+    range.idealRangeLow = fanInfo.expectedRpm[fanInfo.speedSet-1]; 
+  } else {
+    range.idealRangeLow = 0;
+  }
+
+  // 11 is the max fan speed setting (0..11).
+  if (fanInfo.speedSet < 11) {
+    range.idealRangeHigh = fanInfo.expectedRpm[fanInfo.speedSet+1]; 
+  } else {
+     range.idealRangeHigh = fanInfo.expectedRpm[fanInfo.speedSet] + 50;
+  }
+
+  // Hack for the -ve value to balance the display.
+  // Assume fan doesn't go above 2000 RPM.
+  range.minValue = -(2* fanInfo.expectedRpm[3]);  // 3 = high speed.
+  range.maxValue = 2* fanInfo.expectedRpm[3];  
+
+  range.factor = 1;
+  return range;
+}
 
 // ----------------------------------
 // 255: Automatic
@@ -439,6 +562,7 @@ void setLedHourRange(int fanId, int value, displayRange_t displayRange, int hour
 void setGenericNose(int fanId, int value, displayRange_t displayRange) {
   // Low
   if (value < displayRange.idealRangeLow) {
+    Serial.println("Nose below range");
     setNoseColor(fanId, CRGB::Blue);
     return;  
   } 
@@ -480,6 +604,11 @@ void setLedByHour(int fanId, int hour, CRGB color) {
 
 // TODO: Pass colour in...
 void setLed(int fanId, int ledId, CRGB color) {
+  if (ledId > 15) {
+    Serial.println("LedId out of range.");
+    return;
+  }
+  
   int ledIndex = (16 * (fanId-1)) + ledId;
   leds[ledIndex] = color;
   return;
@@ -536,4 +665,5 @@ CRGB getBackgroundColor(int fanId, int value, displayRange_t displayRange) {// i
   return color;
   //return CRGB::Yellow;
 }
+
 

@@ -19,8 +19,10 @@ int master_power_pin = 13; // RX
 
 // Settings.
 int fan_pulse_count[] = {0,0,0,0,0};
-int fan_computed_rpm[] = {0,0,0,0,0};
+//int fan_computed_rpm[] = {0,0,0,0,0};
 int fan_speed_set[] = {0,0,0,0,0};
+// Fans 1,2,3, 4 and 5 No fan 0 (Fan 
+fanInfo_t fanInfos[6];
 
 
 // 0: Ignore - manual
@@ -39,11 +41,15 @@ int fan_speed_set[] = {0,0,0,0,0};
 // 255: Automatic
 // TODO: Load this from EEPROM or something.
 // Let it be settable via MQTT/Alexa/////
-DisplayMode fanDisplayModes[] = {DisplayMode::Humidity, DisplayMode::Ignore, DisplayMode::Ignore, DisplayMode::Ignore};
+DisplayMode fanDisplayModes[] = {
+  DisplayMode::Temperature, 
+  DisplayMode::AirQuality, 
+  DisplayMode::Ignore, 
+  DisplayMode::Ignore};
 
 // User selected speed to set the fans to.
 int pwmSpeed = 255;
-int fanMode = 3; // Fan mode. 0=Off, 1=Low, 2=Medium, 3=High 
+int fanMode = 3; // Fan mode. 0=Off, 1=Low, 2=Medium, 3=High, 4 = auto??
 
 // State of the master power selection.
 bool master_power = false;
@@ -74,6 +80,7 @@ bool hasCCS811 = false;
 // Guess at appropriate values whilst not available to be read.
 float humidity = 50;
 float temperature = 22;
+float pressure = 1015.2;
 
 // CCS811
 long ccs811DataUsableAfter;
@@ -111,7 +118,15 @@ void setup() {
 
   temperatureRange = setupTemperatureDisplayRange();
   humidityRange = setupHumidityDisplayRange();
+  pressureRange = setupPressureDisplayRange();
   airQualityRange = setupAirQualityDisplayRange();
+
+  fanInfos[0] = setUpFan1(); // place holder... FanId is 1..4
+  fanInfos[1] = setUpFan1();
+  fanInfos[2] = setUpFan2();
+  fanInfos[3] = setUpFan3();
+  fanInfos[4] = setUpFan4();
+  fanInfos[5] = setUpFan5();
 
   rtc.begin();
   //rtc.setTime(04, 40, 20);
@@ -146,13 +161,13 @@ long lastAirMonitor = 0;
 void loop() {
   loopCounter++;
   digitalWrite(LED_BUILTIN, HIGH); // D6 used for input for dust sensor when fitted.
-  delay(50);
+  delay(20);
 
   readInput();
   handleNeopixels();
   
   digitalWrite(LED_BUILTIN, LOW);    
-  delay(500);
+  delay(100);
 }
 
 // Loop handler to update the Neopixels (i.e. LED leds + possible others)
@@ -165,13 +180,14 @@ void handleNeopixels() {
 
   FastLED.show(); 
 }
+
+int selectedFanId = 1;
   
 // ==============================================================
 // User input
 // ==============================================================
 void readInput() {
-  int selectedFanId = 1;
- 
+
   if (Serial.available()) {
     char instruction = Serial.read();
 
@@ -260,11 +276,29 @@ void readInput() {
         temperature +=0.25;
         humidity +=2;
         eCO2 +=100;
+        pressure +=25;
+        fanInfos[selectedFanId].computedRpm+=100;
+        fanInfos[selectedFanId].speedSet++;
+        if (fanInfos[selectedFanId].speedSet > 11) {
+          fanInfos[selectedFanId].speedSet = 11;
+        }
         break;
       case '-':
         temperature -=0.25;
         humidity -=2;
         eCO2 -=100;
+        pressure -=25;
+        fanInfos[selectedFanId].computedRpm -=100;
+        fanInfos[selectedFanId].speedSet--;
+        if (fanInfos[selectedFanId].speedSet < 0) {
+          fanInfos[selectedFanId].speedSet = 0;
+        }
+        break;
+      case 'm':
+        master_power = !master_power;
+        Serial.print("Toggling master power. Now: ");
+        Serial.print(master_power);
+        Serial.println();
         break;
       default:
         Serial.println("Unknown instruction. Select: 0..F, t, h, p, q");
@@ -274,22 +308,33 @@ void readInput() {
         Serial.println("p - Select [p]ressure fan");
         Serial.println("q - Select air [q]uality fan");
         Serial.println("o - all LEDs [o]ff)");
+        Serial.println("m - toggle [m]aster power for fans)");
         break;
     }
-  }
 
+    printVariables();
+  }
+}
+
+void printVariables() {
   Serial.print("Temperature: ");
   Serial.print(temperature);
   Serial.print(", Humidity: ");
   Serial.print(humidity);
+  Serial.print(", Pressure: ");
+  Serial.print(pressure);
   Serial.print(", eCO2: ");
   Serial.print(eCO2);
+  Serial.print(", fan speed: ");
+  Serial.print(fanInfos[selectedFanId].speedSet);
+  Serial.print(", fan Rpm: ");
+  Serial.print(fanInfos[selectedFanId].computedRpm);
   Serial.println();
 }
 
 
 // ==========================================================
-// Range setup
+// Display parameters setup
 // ==========================================================
 
 // Setup parameters for temperature display
@@ -308,6 +353,12 @@ displayRange_t setupTemperatureDisplayRange() {
   range.maxValue = (idealValue + 2.5) * factor; 
 
   range.factor = factor;
+  range.fanSpeedAboveIdeal[0] = 22;
+  range.fanSpeedAboveIdeal[1] = 24;
+  range.fanSpeedAboveIdeal[2] = 25;
+  range.fanSpeedBelowIdeal[0] = 18;
+  range.fanSpeedBelowIdeal[1] = 18;
+  range.fanSpeedBelowIdeal[2] = 18;
   return range;
 }
 
@@ -333,6 +384,26 @@ displayRange_t setupHumidityDisplayRange() {
   return range;
 }
 
+displayRange_t setupPressureDisplayRange() {
+  float idealValue = 1015;
+  int factor = 1;
+
+  displayRange_t range;
+  range.idealValue = idealValue;
+  
+  range.idealRangeLow = 1000; 
+  range.idealRangeHigh = 1030; 
+
+  // Hack for the -ve value to balance
+  // the display.
+  range.minValue = 900;
+  range.maxValue = 1100;
+
+  range.factor = factor;
+  return range;
+}
+
+// Using eCO2 as air quality...
 // Setup parameters for air quality display
 // this is different to temp/humidity in that
 // it's only the upper range that matters.
@@ -343,14 +414,106 @@ displayRange_t setupAirQualityDisplayRange() {
   displayRange_t range;
   range.idealValue = idealValue;
   
-  range.idealRangeLow = 0; 
+  range.idealRangeLow = -1000; 
   range.idealRangeHigh = 1000; 
 
-  range.minValue = 0;
-  range.maxValue = 2500; 
+  // Hack for the -ve value to balance
+  // the display.
+  range.minValue = -2000;
+  range.maxValue = 2000; 
 
   range.factor = factor;
   return range;
+}
+
+
+// ============================================
+// Setup fan parameters
+// ============================================
+
+fanInfo_t setUpFan1() {
+  fanInfo_t fanInfo;
+  fanInfo.enabled = true;
+  fanInfo.pulseCount = 0;
+  // Current RPM computed from pulse counts
+  fanInfo.computedRpm = 0;
+  // Array of RPM's expected indexed by fanModel
+  // e.g. [0] = 0, [1] = 400, [2] = 600, [3] = 800, ... [11]
+  // Leave as defaults
+  //fanInfo.expectedRpm[0] = 0;
+  fanInfo.speedSet = 0;
+  fanInfo.pulseToRpmFactor = 1; // 1, 2, or 4 typically.
+  fanInfo.outerColor = CRGB::Green;
+  fanInfo.noseColor = CRGB::Orange;
+  return fanInfo;
+}
+
+fanInfo_t  setUpFan2() {
+  fanInfo_t fanInfo;
+  fanInfo.enabled = true;
+  fanInfo.pulseCount = 0;
+  // Current RPM computed from pulse counts
+  fanInfo.computedRpm = 0;
+  // Array of RPM's expected indexed by fanModel
+  // e.g. [0] = 0, [1] = 400, [2] = 600, [3] = 800, ... [11]
+  // Leave as defaults
+  //fanInfo.expectedRpm[0] = 0;
+  fanInfo.speedSet = 0;
+  fanInfo.pulseToRpmFactor = 1; // 1, 2, or 4 typically.
+  fanInfo.outerColor = CRGB::Green;
+  fanInfo.noseColor = CRGB::Blue;
+  return fanInfo;
+}
+
+fanInfo_t  setUpFan3() {
+  fanInfo_t fanInfo;
+  fanInfo.enabled = true;
+  fanInfo.pulseCount = 0;
+  // Current RPM computed from pulse counts
+  fanInfo.computedRpm = 0;
+  // Array of RPM's expected indexed by fanModel
+  // e.g. [0] = 0, [1] = 400, [2] = 600, [3] = 800, ... [11]
+  // Leave as defaults
+  //fanInfo.expectedRpm[0] = 0;
+  fanInfo.speedSet = 0;
+  fanInfo.pulseToRpmFactor = 1; // 1, 2, or 4 typically.
+  fanInfo.outerColor = CRGB::Green;
+  fanInfo.noseColor = CRGB::Orange;
+  return fanInfo;
+}
+
+fanInfo_t  setUpFan4() {
+  fanInfo_t fanInfo;
+  fanInfo.enabled = true;
+  fanInfo.pulseCount = 0;
+  // Current RPM computed from pulse counts
+  fanInfo.computedRpm = 0;
+  // Array of RPM's expected indexed by fanModel
+  // e.g. [0] = 0, [1] = 400, [2] = 600, [3] = 800, ... [11]
+  // Leave as defaults
+  //fanInfo.expectedRpm[0] = 0;
+  fanInfo.speedSet = 0;
+  fanInfo.pulseToRpmFactor = 1; // 1, 2, or 4 typically.
+  fanInfo.outerColor = CRGB::Green;
+  fanInfo.noseColor = CRGB::Orange;
+  return fanInfo;
+}
+
+fanInfo_t setUpFan5() {
+  fanInfo_t fanInfo;
+  fanInfo.enabled = false; // not fitted
+  fanInfo.pulseCount = 0;
+  // Current RPM computed from pulse counts
+  fanInfo.computedRpm = 0;
+  // Array of RPM's expected indexed by fanModel
+  // e.g. [0] = 0, [1] = 400, [2] = 600, [3] = 800, ... [11]
+  // Leave as defaults
+  //fanInfo.expectedRpm[0] = 0;
+  fanInfo.speedSet = 0;
+  fanInfo.pulseToRpmFactor = 1; // 1, 2, or 4 typically.
+  fanInfo.outerColor = CRGB::Green;
+  fanInfo.noseColor = CRGB::Orange;
+  return fanInfo;
 }
 
 

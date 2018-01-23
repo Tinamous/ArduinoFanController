@@ -1,8 +1,15 @@
+#include <SparkFunCCS811.h>
+
 #include <FastLED.h>
-#include <WiFi101.h>
-#include <Adafruit_MQTT.h>
-#include <Adafruit_MQTT_Client.h>
+//#include <WiFi101.h>
+//#include <Adafruit_MQTT.h>
+//#include <Adafruit_MQTT_Client.h>
 //#include <Adafruit_MQTT_FONA.h>
+
+// 15 puts it on A0 as used on PCB
+// 6 - D6 - as used by functional box at present....
+int neopixelPins = 15; // proto & +PCB
+//int neopixelPins = 6; // box
 
 // Pin Mappins
 int fan_pwm_pins[] = { 2, 3, 4, 5, 10}; // Was 6, now pin D10 - MISO
@@ -18,10 +25,12 @@ int master_power_pin = 13; // RX
 
 // Settings.
 int fan_pulse_count[] = {0,0,0,0,0};
+int fan_computed_rpm[] = {0,0,0,0,0};
 int fan_speed_set[] = {0,0,0,0,0};
 
 // User selected speed to set the fans to.
 int pwmSpeed = 255;
+int fanMode = 3; // Fan mode. 0=Off, 1=Low, 2=Medium, 3=High 
 
 // State of the master power selection.
 bool master_power = false;
@@ -36,6 +45,34 @@ int lastRedLedIndex = 4;
 #define NUM_LEDS 16
 // ech fan has 16ish...
 CRGB leds[NUM_LEDS];
+
+#define CCS811_ADDR 0x5B //Default I2C Address
+//#define CCS811_ADDR 0x5A //Alternate I2C Address
+
+CCS811 myCCS811(CCS811_ADDR);
+
+bool hasBme280 = false;
+bool hasBme680 = false;
+bool hasCCS811 = false;
+
+// BME 280 (or 680)
+// Guess at appropriate values whilst not available to be read.
+float humidity = 40;
+float temperature = 22;
+
+// CCS811
+long ccs811DataUsableAfter;
+unsigned int ccsBaseline;
+unsigned int tVOC = 0;
+unsigned int eCO2 = 0;
+
+// Visualisation settings
+// temperature
+// 0 = relative, 1 = absolute.
+int temperatureMode = 0;
+// relative mode, +/- range of referece
+// absolute mode, reference is minimm
+int temperatureReference = 21;
 
 
 // the setup function runs once when you press reset or power the board
@@ -55,29 +92,63 @@ void setup() {
 
   SetupNeopixels();
 
+  //Initialize serial:
+  Serial.begin(9600);
+
+  delay(5000);
+
   setupBME280();
   
   setupBME680();
   
   setupCCS811();
-
-  //Initialize serial:
-  Serial.begin(9600);
-
-  delay(5000);
+  
   Serial.println("Really Dusty Box...");
+  Serial.println("");
+  printHeader();
 }
 
 void setupBME280() {
   // If fitted.
+  Serial.println("Setup BME280...");
+  Serial.println("BME280 error. ");
 }
 
 void setupBME680() {
   // If fitted
+  Serial.println("Setup BME680...");
+  Serial.println("BME680 error. ");
 }
 
+
 void setupCCS811() {
+  Serial.println("Setup CCS811...");
   // If fitted
+  bool status = myCCS811.begin();
+  if (status > 0) {
+    Serial.print("CCS811 error. Code: ");
+    Serial.println(status);
+    hasCCS811 = false;
+    return;
+  }
+  hasCCS811 = true;
+  
+  // meaure every 10 seconds
+  //myCCS811.setDriveMode(2);
+
+  // meaure every 1 seconds
+  myCCS811.setDriveMode(1);
+
+  // Set defaults for now.
+  // should be updated once the BME readings are present
+  myCCS811.setEnvironmentalData(humidity, temperature);
+
+  ccs811DataUsableAfter = millis() + (20 * 60 * 1000);
+  Serial.print("CCS811 Data Usable After: ");
+  Serial.print(ccs811DataUsableAfter/1000);
+  Serial.println("s");
+
+  // TODO: Set baseline from eeprom
 }
 
 void setupFans() {
@@ -119,19 +190,16 @@ void SetupDustSensor() {
 
 
 void SetupNeopixels() {
-  // TODO
-  //strip.begin();
-  //strip.show(); // Initialize all pixels to 'off'
-// A0
 
   for (int i=0; i< NUM_LEDS; i++) {
     leds[i] = CRGB::Blue;
   }
-  FastLED.addLeds<NEOPIXEL, 6>(leds, NUM_LEDS); 
+  
+  // 15 puts it on A0.
+  // 6 - D6 - as used by protoboard at prsent.
+  FastLED.addLeds<NEOPIXEL, 15>(leds, NUM_LEDS); 
   Serial.println("Neopixels setup...");
   FastLED.show(); 
-  
-  
 }
 
 void setSwitchLEDs(bool state) {
@@ -140,7 +208,13 @@ void setSwitchLEDs(bool state) {
   }
 }
 
+// ==============================================================
+// Loop functions
+// ==============================================================
+
 int loopCounter = 0;
+long lastAirMonitor = 0;
+
 // the loop function runs over and over again forever
 void loop() {
   loopCounter++;
@@ -148,16 +222,16 @@ void loop() {
   setSwitchLEDs(HIGH);
   delay(100);
 
+  long now = millis();
+
+  if (now  - lastAirMonitor > 2000) {
+    checkAirQuality();
+  }
+
   if (loopCounter > 20) {
     loopCounter = 0;
-    
-    Serial.print("Counts\t");
-    for (int i=0; i<5; i++) {
-      Serial.print(fan_pulse_count[i], DEC);
-      Serial.print("\t");
-      fan_pulse_count[i] = 0;
-    }
-    Serial.println();
+    computeFanSpeed();
+    displayStatus();
   }
 
   handleSwitches();
@@ -169,6 +243,102 @@ void loop() {
   //digitalWrite(LED_BUILTIN, LOW);    
   setSwitchLEDs(LOW);
   delay(100);
+}
+
+void checkAirQuality() {
+  // BME680
+  // TODO: Set CCS811 temperature to allow for correction..
+  //myCCS811.setEnvironmentalData(humidity, temperature);
+  
+  // BME280
+  // TODO: Set CCS811 temperature to allow for correction..
+  //myCCS811.setEnvironmentalData(humidity, temperature);
+
+  // CCS811
+  if (myCCS811.dataAvailable())
+  {       
+    myCCS811.readAlgorithmResults();
+    eCO2 = myCCS811.getCO2();
+    tVOC = myCCS811.getTVOC();
+  } else if (myCCS811.checkForStatusError())  {
+    Serial.print("Status error from CCS811: "); 
+    uint8_t statusError = myCCS811.getErrorRegister();
+    Serial.print(statusError); 
+    Serial.println(); 
+  } else {
+    Serial.println("CCS811 no data"); 
+  }
+
+  lastAirMonitor = millis();
+}
+
+// Compute the fan speed in RPM
+// todo: use /1 /2 or /4 as appropriate
+// averaging?
+void computeFanSpeed()  {
+  for (int i=0; i<5; i++) {
+    fan_computed_rpm[i] = fan_pulse_count[i];
+    fan_pulse_count[i] = 0;
+  }
+}
+
+void displayStatus() {
+    Serial.print("Fans:\t");
+    for (int i=0; i<5; i++) {
+      Serial.print(fan_computed_rpm[i], DEC);
+      Serial.print("\t");
+    }
+
+    Serial.print("CCS811:\t");
+    if (hasCCS811) {
+      // If were past the time the data is usable show the sensor as OK.
+      // otherwise show the time remaing until stable.
+      if (millis() > ccs811DataUsableAfter) {
+        Serial.print("OK\t");
+      } else {
+        long remainingTime = (ccs811DataUsableAfter - millis())/1000;
+        Serial.print("t-");
+        Serial.print(remainingTime);
+        Serial.print("s\t");
+      }
+            
+      Serial.print(tVOC);
+      Serial.print("\t");
+      Serial.print(eCO2);
+      Serial.print("\t");
+    } else {
+      // No CCS811 so show the error.
+      Serial.print("Fault\t");// OK or t-
+      Serial.print("---\t");  // VOC
+      Serial.print("---\t");  // eCO2
+    }
+    Serial.print(master_power ? "On" : "Off");
+    Serial.print("\t");
+
+    Serial.print(fanMode);
+    Serial.print("\t");
+    
+    Serial.print(pwmSpeed);
+    Serial.print("\t");
+    
+    Serial.println();
+}
+
+void printHeader() {
+  Serial.print("Fans\t");
+  Serial.print("1\t");
+  Serial.print("2\t");
+  Serial.print("3\t");
+  Serial.print("4\t");
+  Serial.print("5\t");
+  Serial.print("CCS\t");
+  Serial.print("status\t");
+  Serial.print("tVOCs\t");
+  Serial.print("eCO2\t");
+  Serial.print("Power\t");
+  Serial.print("F.Mode\t");
+  Serial.print("PWM\t");
+  Serial.println();
 }
 
 void handleSwitches() {
@@ -220,6 +390,7 @@ void readInput() {
     switch (instruction) {
       case '0':
         Serial.println("switching all fans off");
+        fanMode = 0;
         setFan(1, 0);
         setFan(2, 0);
         setFan(3, 0);
@@ -242,16 +413,20 @@ void readInput() {
         setFan(5, pwmSpeed);
         break;
       case 'l':
+        // TODO: Use individual pwm setting for each fan for the power mode
         Serial.println("Low speed selected");
         pwmSpeed = 0;
+        fanMode = 1;
         break;
       case 'm':
         Serial.println("Medium speed selected");
         pwmSpeed = 128;
+        fanMode = 2;
         break;
       case 'h':
         Serial.println("High speed selected");
         pwmSpeed = 255;
+        fanMode = 3;
         break;
       case 'p':
         setPower(HIGH);
@@ -259,11 +434,37 @@ void readInput() {
       case 'o':
         setPower(LOW);
         break;
-     default:
-        Serial.println("Unknown instruction. Select: 0, 1, 2, 3, 4, 5, l, m, h");
+      case 'r': // read baseline
+        Serial.println("Read CCS811 Baseline");
+        ccsBaseline = myCCS811.getBaseline();
+        Serial.print("CCS811 base line: ");
+        Serial.print(ccsBaseline, HEX);
+        Serial.println("");
+        break;
+      case 'b':
+        // See: https://github.com/sparkfun/SparkFun_CCS811_Arduino_Library/blob/master/examples/BaselineOperator/BaselineOperator.ino
+        Serial.println("Setting CCS811 Baseline");
+        unsigned int baselineToApply;
+        baselineToApply = 0x1485;
+        
+        CCS811Core::status errorStatus;
+        myCCS811.setBaseline( baselineToApply );
+        
+        if ( errorStatus == CCS811Core::SENSOR_SUCCESS ) {
+          Serial.println("Baseline written to CCS811.");
+        } else {
+          Serial.println("Baseline write error.");
+        }
+        break;
+      default:
+        Serial.println("Unknown instruction. Select: 0, 1, 2, 3, 4, 5, l, m, h, p, o, r, b");
         Serial.println("0 - All fans off");
         Serial.println("1..5 - Fan 1..5 on");
-        Serial.println("l,m,h - Low, Medium, High speed set for next fan");
+        Serial.println("l,m,h - [l]ow, [m]edium, [h]igh speed set for next fan");
+        Serial.println("p - 12v Fan [p]ower on (o - off)");
+        Serial.println("o - 12v Fan power [o]ff)");
+        Serial.println("r - [r]ead ccs baseline");
+        Serial.println("b - set ccs [b]aseline (to 0000 at present)");
         break;
     }
   }
@@ -301,15 +502,80 @@ void setPower(bool state) {
 // Loop handler to update the Neopixels (i.e. LED leds + possible others)
 void handleNeopixels() {
 
-  leds[lastRedLedIndex] = CRGB::Blue; 
-  leds[redLedIndex] = CRGB::Red; 
-  lastRedLedIndex = redLedIndex;
-  redLedIndex++;
-  if (redLedIndex >= NUM_LEDS) {
-    redLedIndex = 4;
-  }
+  updateFan1Leds();
+  updateFan2Leds();
+  updateFan3Leds();
+  updateFan4Leds();
+  updateStrip1Leds();
+  updateStrip2Leds();
+  endLedUpdate();
 
   FastLED.show(); 
+}
+
+
+void updateFan1Leds() {
+  // Temperature
+  int fanId = 1;
+  // Cycle mode....
+  redLedIndex++;
+
+  
+  showOuterValue(1,  redLedIndex, 1, 12);
+  showNoseValue(1);
+}
+
+void updateFan2Leds(){
+  // Humidty
+  showOuterValue(2,  redLedIndex, 1, 12);
+  showNoseValue(2);
+  }
+  
+void updateFan3Leds(){
+  // Pressure
+  showOuterValue(3,  redLedIndex, 1, 12);
+  showNoseValue(3);
+}
+
+void updateFan4Leds(){
+  // VOCs
+  showOuterValue(4,  redLedIndex, 1, 12);
+  showNoseValue(4);
+}
+
+void updateStrip1Leds(){}
+void updateStrip2Leds(){}
+void endLedUpdate() {
+   lastRedLedIndex = redLedIndex;
+
+    // If past the end end of the cycle rese.
+    if (redLedIndex >= NUM_LEDS) {
+      redLedIndex = 4;
+    }
+}
+
+
+// Show value on fan's outer LEDs.
+// fanId: 1..4
+void showOuterValue(int fanId,  int value, int minValue, int maxValue) {
+
+  // LED 0..3 are for the nose.
+  int minLed = (16 * fanId-1) + 4; 
+  int maxLed = 16 * fanId;
+  
+  //int startLed = 
+  //int endLed = 
+  leds[lastRedLedIndex] = CRGB::Blue; 
+  leds[value] = CRGB::Red; 
+  
+}
+
+// Use the fans "nose" to show a value. Uses all 4 LEDs.
+void showNoseValue(int fanId) {
+  // Each fan has 16 LEDs.
+  int startLed = 0 + ((fanId-1) * 16);
+  int endLed = 3 + ((fanId-1) * 16);
+  
 }
 
 // ==========================================================
