@@ -12150,9 +12150,11 @@ B340A  3A 40V SMA &lt;br&gt;</description>
 <part name="GND27" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND28" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="SUPPLY10" library="SparkFun-Aesthetics" deviceset="VIN" device=""/>
-<part name="R11" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES"/>
+<part name="R11" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="470R"/>
 <part name="C4" library="SparkFun-Capacitors" deviceset="47UF-10V-10%(TANT)" device="" value="47uF"/>
-<part name="C5" library="SparkFun-Capacitors" deviceset="47UF-10V-10%(TANT)" device="" value="47uF"/>
+<part name="C5" library="SparkFun-Capacitors" deviceset="47UF-10V-10%(TANT)" device="" value="47uF">
+<attribute name="FARNELL" value="1135048"/>
+</part>
 <part name="GND10" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND13" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="BME280" library="SparkFun-Connectors" deviceset="M06" device="SILK_FEMALE_PTH" value="eBay BME280"/>
@@ -12263,6 +12265,15 @@ LED supply option</text>
 <wire x1="187.96" y1="38.1" x2="144.78" y2="38.1" width="0.1524" layer="97"/>
 <wire x1="187.96" y1="60.96" x2="187.96" y2="38.1" width="0.1524" layer="97"/>
 <wire x1="144.78" y1="60.96" x2="129.54" y2="60.96" width="0.1524" layer="97"/>
+<text x="252.222" y="3.302" size="1.778" layer="97">Notes:
+* Use a bigger fet for main 12v switch. Some 12V fans can run at 5A.
+* Include PolyFuse on main fan supply pre FET.
+* Fan 5 should be taken from 12v not Fan supply so it can be run without the other fans having power (PWM Fans run even on zero PWM).
+* Second switching control so Fans 1/2 and 3/4 have master fet switches.
+* Reverse mount vertical USB socket options (switched) for air freshner
+* Forward mount vertical USB socket for phone charge?
+* Can Fans 1 &amp; 2, 3 &amp; 4 share pwm signals?</text>
+<text x="33.02" y="48.26" size="1.778" layer="97">C5: Ideally 1000uF @ 6.3V, Farnell 1135048 100uF Tant</text>
 </plain>
 <instances>
 <instance part="FRAME1" gate="G$1" x="0" y="0"/>
@@ -12373,6 +12384,7 @@ LED supply option</text>
 <instance part="C5" gate="G$1" x="25.4" y="40.64" smashed="yes" rot="R90">
 <attribute name="NAME" x="24.638" y="44.323" size="1.778" layer="95"/>
 <attribute name="VALUE" x="28.956" y="37.211" size="1.778" layer="96" rot="R180"/>
+<attribute name="FARNELL" x="25.4" y="40.64" size="1.778" layer="96" rot="R90" display="off"/>
 </instance>
 <instance part="GND10" gate="1" x="35.56" y="40.64" rot="R90"/>
 <instance part="GND13" gate="1" x="53.34" y="7.62"/>
