@@ -1,0 +1,11 @@
+Changes:
+
+Make it 155mm deep (to fit book case)
+
+Raise up power inlet (so it's not hitting on the book case back).
+
+make z height of USB inlet 2-3mm longer (towards the base).
+
+Make x size of USB inlet 2mm narrower (1mm either side).
+
+Remove screw fittings, these don't work well. Use glue
