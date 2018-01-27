@@ -20,9 +20,10 @@ typedef enum {
     FixedColor = 13, // todo
     lightLevel = 14, // todo (need range)
     // The user selected fan speed (0..11)
-    SelectedFanSpeed = 253, // done
+    SelectedFanSpeed = 15, // done
     // Fan Speed in RPM
-    FanSpeed = 254, // broken
+    FanSpeed = 16, // broken
+    Fancy = 100,
     Automatic = 255, // todo
 } DisplayMode;
 

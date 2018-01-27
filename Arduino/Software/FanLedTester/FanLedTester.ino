@@ -42,10 +42,10 @@ fanInfo_t fanInfos[6];
 // TODO: Load this from EEPROM or something.
 // Let it be settable via MQTT/Alexa/////
 DisplayMode fanDisplayModes[] = {
-  DisplayMode::Temperature, 
-  DisplayMode::AirQuality, 
-  DisplayMode::Ignore, 
-  DisplayMode::Ignore};
+  DisplayMode::Fancy, 
+  DisplayMode::Fancy, 
+  DisplayMode::Fancy, 
+  DisplayMode::Fancy};
 
 // User selected speed to set the fans to.
 int pwmSpeed = 255;
@@ -107,10 +107,13 @@ void setup() {
 
   SetupNeopixels();
 
-  setFanBackground(1, CRGB::Yellow);
-  setFanBackground(2, CRGB::Yellow);
-  setFanBackground(3, CRGB::Yellow);
-  setFanBackground(4, CRGB::Yellow);
+    // Set the noses to show startup...
+  for (int fanId = 1; fanId <=4; fanId++) {
+    setNoseColor(fanId, CRGB::Red);
+    setFanBackground(fanId, CRGB::Yellow);
+    delay(1000);
+  }
+  FastLED.show(); 
 
   //Initialize serial:
   Serial.begin(9600);
@@ -161,13 +164,13 @@ long lastAirMonitor = 0;
 void loop() {
   loopCounter++;
   digitalWrite(LED_BUILTIN, HIGH); // D6 used for input for dust sensor when fitted.
-  delay(20);
+  delay(5);
 
   readInput();
   handleNeopixels();
   
   digitalWrite(LED_BUILTIN, LOW);    
-  delay(100);
+  delay(5);
 }
 
 // Loop handler to update the Neopixels (i.e. LED leds + possible others)

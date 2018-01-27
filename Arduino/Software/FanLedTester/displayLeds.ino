@@ -77,6 +77,9 @@ void endLedUpdate() {
 void showOuterValue(int fanId) {
   DisplayMode fanMode = fanDisplayModes[fanId-1];
 
+  //Serial.print("Fan: ");
+  //Serial.print(fanId);
+
   switch (fanMode) {
     case DisplayMode::Ignore:
       // No action. Manual control.
@@ -126,6 +129,9 @@ void showOuterValue(int fanId) {
       break;
     case DisplayMode::FanSpeed:
       showFanRpmSpeed(fanId);
+      break;
+    case DisplayMode::Fancy:
+      showFancy(fanId);
       break;
     case DisplayMode::Automatic:
       showAutomatic(fanId);
@@ -192,6 +198,9 @@ void showNoseValue(int fanId) {
     case DisplayMode::FanSpeed:
       showNoseFanSpeed(fanId);
       break;
+    case DisplayMode::Fancy:
+      showNoseFancy(fanId);
+      break;
     case DisplayMode::Automatic:
       showNoseAutomatic(fanId);
       break;
@@ -210,6 +219,9 @@ void showTemperature(int fanId) {
   // Map the desired value onto the fan surround.
   // *10 to avoid float usage
   int temperatureFactorised = temperature * temperatureRange.factor;
+
+  Serial.print("Temperature: ");
+  Serial.println(temperature);
   
   mapToFan(fanId, temperatureFactorised, temperatureRange);
 }
@@ -227,6 +239,7 @@ void showNoseTemperature(int fanId) {
 
 void showHumidity(int fanId) {
   mapToFan(fanId, (int)humidity, humidityRange);
+  Serial.println("Humidity");
 }
 
 void showNoseHumidity(int fanId) {
@@ -364,7 +377,7 @@ void showNoseFixedColor(int fanId) {
 }
 
 // ----------------------------------
-// 243: Fan Selected Speed
+// 14: Fan Selected Speed
 // ----------------------------------
 void showFanSelectedSpeed(int fanId) {
   // 0..11 - directly maps to the hour.
@@ -378,7 +391,7 @@ void showFanSelectedSpeed(int fanId) {
 }
 
 // ----------------------------------
-// 244: Fan Speed
+// 15: Fan Speed
 // ----------------------------------
 void showFanRpmSpeed(int fanId) {
   displayRange_t displayRange = setupFanDisplayRange(fanId);
@@ -458,6 +471,114 @@ displayRange_t setupFanDisplayRange(int fanId) {
   return range;
 }
 
+int fancy_k = 0;
+int fancy_j = 0;
+int dim=2;
+int8_t gHue = 0; // rotating "base color" used by many of the patterns
+static uint8_t hue = 0;
+
+// ----------------------------------
+// ...: Fancy
+// ----------------------------------
+// Automatic - show which ever measurement needs attemption
+void showFancy(int fanId) {
+
+   fancy_j++;
+  if (fancy_j > NUM_LEDS) {
+    //Serial.println("fancy_j reset");
+    fancy_j = 0;
+  }
+    
+   // CRGB ledColor = wheel(fancy_j, 2);   
+    //setFanBackground(fanId, ledColor);
+
+    // This looks fancy...
+    // works way thought the LEDs each look
+    /*
+    // Set the i'th led to red 
+    leds[fancy_j] = CHSV(hue++, 255, 255);
+    // Show the leds
+    FastLED.show(); 
+    // now that we've shown the leds, reset the i'th led to black
+    // leds[i] = CRGB::Black;
+    fadeall();
+    */
+
+    // Sets fan to same color and works way through.
+    setFanBackground(fanId, CHSV(hue++, 255, 255));
+    setNoseColor(fanId, CHSV(hue++, 255, 128));
+    delay(10);
+    //leds[fancy_j] = CHSV(hue++, 255, 255);
+}
+
+void fadeall() { for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(250); } }
+
+// https://github.com/FastLED/FastLED/blob/master/examples/DemoReel100/DemoReel100.ino
+void fancyBeats() {
+ 
+   // colored stripes pulsing at a defined Beats-Per-Minute (BPM)
+  uint8_t BeatsPerMinute = 62;
+  CRGBPalette16 palette = PartyColors_p;
+  uint8_t beat = beatsin8( BeatsPerMinute, 64, 255);
+  for( int i = 0; i < NUM_LEDS; i++) { //9948
+    leds[i] = ColorFromPalette(palette, gHue+(i*2), beat-gHue+(i*10));
+  }
+}
+
+
+void sinelon()
+{
+  // a colored dot sweeping back and forth, with fading trails
+  fadeToBlackBy( leds, NUM_LEDS, 20);
+  int pos = beatsin16( 13, 0, NUM_LEDS-1 );
+  leds[pos] += CHSV( gHue, 255, 192);
+}
+
+void addGlitter( fract8 chanceOfGlitter) 
+{
+  if( random8() < chanceOfGlitter) {
+    leds[ random16(NUM_LEDS) ] += CRGB::White;
+  }
+}
+
+void showNoseFancy(int fanId) {
+  // Color code the nose to indicate which parameter.
+  //CRGB ledColor = wheel(fancy_j , dim);   
+  //setNoseColor(fanId, ledColor);
+}
+
+CRGB wheel(int WheelPos, int dim) {
+  
+  
+  CRGB color;
+  if (85 > WheelPos) {
+   color.r=0;
+   color.g=WheelPos * 3/dim;
+   color.b=(255 - WheelPos * 3)/dim;;
+  } 
+  else if (170 > WheelPos) {
+   color.r=WheelPos * 3/dim;
+   color.g=(255 - WheelPos * 3)/dim;
+   color.b=0;
+  }
+  else {
+   color.r=(255 - WheelPos * 3)/dim;
+   color.g=0;
+   color.b=WheelPos * 3/dim;
+  }
+
+  Serial.print("Wheel: ");
+  Serial.print(WheelPos);
+  Serial.print(", R: ");
+  Serial.print(color.r);
+  Serial.print(", G: ");
+  Serial.print(color.g);
+  Serial.print(", B: ");
+  Serial.print(color.b);
+  Serial.println();
+  return color;
+}
+
 // ----------------------------------
 // 255: Automatic
 // ----------------------------------
@@ -480,6 +601,7 @@ void showNoseAutomatic(int fanId) {
 void mapToFan(int fanId, int value, displayRange_t displayRange) {
   // The hour on the clock the value represents
   int hour = getRangeHour(value, displayRange.minValue, displayRange.maxValue);
+  /*
   Serial.print("Hour:");
   Serial.print(hour);
   Serial.print(", Max:");
@@ -488,7 +610,7 @@ void mapToFan(int fanId, int value, displayRange_t displayRange) {
   Serial.print(displayRange.minValue);
 
   Serial.println();
-  
+  */
 
   // Set all the LEDs to the background color
   // then set just the ones appropriate.
