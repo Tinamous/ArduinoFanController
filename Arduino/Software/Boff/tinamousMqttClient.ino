@@ -75,8 +75,8 @@ bool connectToMqttServer() {
   }
   
   //mqttClient.subscribe("/Commands/Fans"); 
-  mqttClient.subscribe("/Tinamous/V1/Commands/" DEVICE_USERNAME "/Fans"); 
-  //mqttClient.subscribe("/Tinamous/V1/Commands/" DEVICE_USERNAME "/#"); // Subscribe to them all...
+  //mqttClient.subscribe("/Tinamous/V1/Commands/" DEVICE_USERNAME "/Fans"); 
+  mqttClient.subscribe("/Tinamous/V1/Commands/" DEVICE_USERNAME "/#"); // Subscribe to them all...
   Serial.println("Subscribed."); 
   // client.unsubscribe("/hello"); 
 
@@ -225,7 +225,7 @@ void publishTinamousSenMLMeasurements(String senml) {
     return;
   }
   
-  Serial.println("SenML Measurement: " + senml);
+  //Serial.println("SenML Measurement: " + senml);
   mqttClient.publish("/Tinamous/V1/Measurements/SenML", senml); 
 }
 
@@ -243,7 +243,10 @@ int value;
     value = payload.toInt();
     Serial.print("Handle fan speed. Speed Requested: ");
     Serial.print(value); // 0..11
+    Serial.print(", payload: "); // 0..11
+    Serial.print(payload); // 0..11
     Serial.println();
+    setFansSpeed(value);
   } else {
     Serial.println("Unknown FAN command!");    
     publishTinamousStatus("Hello! Sorry I don't know that command. Please check your MQTT topic. Command: ");
@@ -257,28 +260,38 @@ int value;
 // /Leds/Strip/DisplayMode + display mode in payload.
 void handleLedsCommands(String &topic, String &payload) {
 int value;
-  
+value = payload.toInt();
+
   if (topic == "/Leds/Power") {
-    value = payload.toInt();
     // turn on/off the LEDs.
-    ledsEnabled =  (DisplayMode)value;
+    ledsEnabled =  (value > 0);
     Serial.println("Setting ledsEnabled: " + ledsEnabled);
   } else if (topic == "/Leds/Brightness") {
     // Set the brightness
-    ledBrightness =  (DisplayMode)value;
-    Serial.println("Setting leds brightness: " + ledBrightness);
+    if (value > 0 && value < 256) {
+      ledBrightness =  value;
+    } else {
+      Serial.println("Invalid brightness");
+       publishTinamousStatus("Invalid brightness. Range is 0..255. Thanks.");
+    }
+    Serial.print("Setting leds brightness: " );
+    Serial.println(ledBrightness, DEC);
   } else if (topic == "/Leds/Fan1/DisplayMode") {
     // Set display type for LED1
-    Serial.println("Handle fan 1 led DisplayMode: " + value);
+    Serial.print("Handle fan 1 led DisplayMode: ");
+    Serial.println(value);
     fanDisplayModes[0] =  (DisplayMode)value;
-  } else if (topic == "/Leds/Fan2/DisplayModey") {
-    Serial.println("Handle fan 2 led DisplayMode: " + value);
+  } else if (topic == "/Leds/Fan2/DisplayMode") {
+    Serial.print("Handle fan 2 led DisplayMode: ");
+    Serial.println(value);
     fanDisplayModes[1] =  (DisplayMode)value;
   } else if (topic == "/Leds/Fan3/DisplayMode") {
-    Serial.println("Handle fan 3 led DisplayMode: " + value);
+    Serial.print("Handle fan 3 led DisplayMode: ");
+    Serial.println(value);
     fanDisplayModes[2] =  (DisplayMode)value;
-  } else if (topic == "/Leds/Fan4/DisplayType") {
-    //Serial.println("Handle fan 4 led DisplayMode: " + value);
+  } else if (topic == "/Leds/Fan4/DisplayMode") {
+    Serial.print("Handle fan 4 led DisplayMode: ");
+    Serial.println(value);
     fanDisplayModes[3] = (DisplayMode)value;
   } else if (topic == "/Leds/Strip/DisplayMode") {
     Serial.println("Handle led strip DisplayMode");
@@ -296,6 +309,8 @@ int value = payload.toInt();
   mqttFeedsValue[index] = payload.toInt();
 }
 
+
+
 // Commands:
 // /Sleep/Now - sleeps NOW Fans and LEDs full off.
 // /Sleep/At + value in payload
@@ -305,9 +320,11 @@ void handleSleepCommand(String &topic, String &payload) {
   if (topic == "/Sleep/At") {
     value = payload.toInt();
     // Setup sleep mode at this tine
-    Serial.println("Sleep at: " + value); 
+    Serial.print("Sleep at: "); 
+    Serial.println(value, DEC); 
+    Serial.println("*** Not implemented ***");
   } else if (topic == "/Sleep/Now") {
-    Serial.println("Sleep!"); 
+    sleepNow();
   }
 }
 
@@ -320,19 +337,19 @@ void handleWakeCommand(String &topic, String &payload) {
   if (topic == "/Wake/At") {
     value = payload.toInt();
     // Setup sleep mode at this tine
-    Serial.println("Wake at: " + value); 
+    Serial.print("Wake at: "); 
+    Serial.println(value, DEC); 
+    Serial.println("*** Not implemented ***");
   } else if (topic == "/Wake/Now") {
-    Serial.println("Wake!"); 
-    // Power on,
-    // fans to x
-    // master power on
+    wakeNow();
   }
 }
 
 
 // Handle a command that's come in via the MQTT subscription
 void handleCommand(String &topic, String &payload) {
-
+  Serial.println("Handle command: " + topic);
+  
   for (int i=0; i<4; i++) {
     if (mqttFeedsTopic[i] == topic) {
       handleCustomMqttFeed(i, topic, payload);
@@ -384,19 +401,6 @@ void messageReceived(String &topic, String &payload) {
     return;
   }
   
-  // Custom topic (old).
-  if (topic == "/Commands/Fans") {
-    if (payload == "On") {
-      Serial.println("TURN ON THE FANS!!! (Old topic)");
-    }
-    
-    if (payload == "OFF") {
-      Serial.println("Fans off please. (Old topic)");
-    }
-
-    return;
-  } 
-  
   // A status post to me?
   if (payload.startsWith("@")) {
     payload.toLowerCase();
@@ -406,37 +410,96 @@ void messageReceived(String &topic, String &payload) {
   } 
 
   publishTinamousStatus("Unknown message. use help.");
-
-  // Didn't get an expected command, so the message was to us.
-  // Publish a help message.
-  //publishTinamousStatus("Hello! Please use the topic '/Tinamous/V1/Commands/" DEVICE_USERNAME "' to control the fans.");
 } 
 
 bool handleStatusMessage(String payload) {
   if (payload.indexOf("fans on")> 0) {
     Serial.println("Turn on the fans!");
     publishTinamousStatus("Will you switch the fans on please.");
+    setPower(1);
+    setFansSpeed(11);
     return true;
   }
 
   if (payload.indexOf("fans off")> 0) {
     Serial.println("Turn off the fans!");
     publishTinamousStatus("fans go off please.");
+    setPower(0);
+    setFansSpeed(0);
     return true;
   }
 
+  if (payload.indexOf("sleep")> 0) {
+    sleepNow();
+    return true;
+  }
 
+  if (payload.indexOf("wake")> 0) {
+    wakeNow();
+    return true;
+  }   
+
+  if (payload.indexOf("lights off")> 0) {
+    ledsEnabled = false;
+    return true;
+  } 
+
+  if (payload.indexOf("lights on")> 0) {
+    ledsEnabled =  true;
+    return true;
+  } 
+
+  if (payload.indexOf("bright")> 0) {
+    ledsEnabled =  true;
+    ledBrightness =  80;
+    return true;
+  } 
+
+  if (payload.indexOf("dim")> 0) {
+    ledsEnabled =  true;
+    ledBrightness =  10;
+    return true;
+  } 
+
+  if (payload.indexOf("fans speed")> 0) {
+    String setspeed = "";
+    setspeed.reserve(25);
+    char buffer[25];
+    
+    for (int fanSpeed= 11; fanSpeed>=0; fanSpeed--) {
+      sprintf(buffer, "fans speed %01d",fanSpeed);
+      Serial.print("Looking for '");
+      Serial.print(buffer);
+      Serial.println("'");
+      if (payload.indexOf(buffer)> 0) {
+        Serial.print("Setting fans speed to ");
+        Serial.println(fanSpeed, DEC);
+        publishTinamousStatus("Fans speed set.");
+        setPower(1);
+        setFansSpeed(fanSpeed);
+        return true;
+      }
+    }
+  }
+  
   if (payload.indexOf("help")> 0) {
     Serial.println("Sending help...");
     publishTinamousStatus(
     "Send a message to me (@" DEVICE_USERNAME ") then: \n* 'Fans On' to turn the fans on," 
     " or \n* 'Fans Off' to turn the fans off,"
+    " or \n* 'Fans On' to turn the fans on,"    
     " or \n* 'Fans Speed 6' to set the speed to 6 (max 11),"
-    " or \n* Lights Off' to turn of the lights,");
-    //" or \n* Lights On' to turn of the lights");    
+    " or \n* 'sleep'  to turn off the lights and fans,"
+    " or \n* 'wake'  to turn on the lights and fans"
+    " or \n* 'lights on'  to turn on the lights"
+    " or \n* 'lights off'  to turn off the lights"
+    " or \n* 'bright'  to turn the leds to bright"
+    " or \n* 'dim'  to dim the lights"
+    );
     return true;
   }
   
   return false;
 }
+
 

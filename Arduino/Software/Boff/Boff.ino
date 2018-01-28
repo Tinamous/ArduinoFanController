@@ -225,7 +225,7 @@ void loop() {
   delay(100);
 
   if (nextSensorRead < millis()) {
-    Serial.println("Read sensors...");
+    //Serial.println("Read sensors...");
     // meausre other sensors...
     measureRssi();
 
@@ -450,6 +450,24 @@ void printVariables() {
   Serial.println();
 }
 
+// General
+
+void sleepNow() {
+  Serial.println("Sleep!"); 
+  setPower(0);
+    // setFansSpeed(0); // leave as is for wake mode.
+  SetLedsOnOff(false);
+  publishTinamousStatus("Sleep mode activated.");
+}
+
+void wakeNow() {
+  Serial.println("Wake!"); 
+  setPower(1);
+  // setFansSpeed(11);?
+  SetLedsOnOff(true);
+  publishTinamousStatus("Waking up.");
+}
+
 
 // ==========================================================
 // Display parameters setup
@@ -488,7 +506,8 @@ displayRange_t setupHumidityDisplayRange() {
 
   displayRange_t range;
   range.idealValue = idealValue;
-  
+
+  // 40-60% is "optimal"
   range.idealRangeLow = idealValue - 5; 
   range.idealRangeHigh = idealValue + 5; 
 
