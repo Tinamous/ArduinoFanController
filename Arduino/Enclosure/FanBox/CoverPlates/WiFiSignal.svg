@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 744.09448819 1052.3622047"
+   id="svg7778"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="WiFiSignal.svg">
+  <defs
+     id="defs7780" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="-105.77812"
+     inkscape:cy="455.81461"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer2"
+     showgrid="true"
+     inkscape:window-width="2560"
+     inkscape:window-height="1335"
+     inkscape:window-x="2552"
+     inkscape:window-y="1072"
+     inkscape:window-maximized="1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid8330" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7783">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Back"
+     style="display:inline">
+    <g
+       id="g6441"
+       transform="matrix(4.2672779,0,0,4.2672779,146.22855,115.21217)">
+      <g
+         id="g6421">
+        <path
+           id="path6423"
+           d="M 81.547,47.826 C 73.612,39.554 62.412,34.399 50,34.399 c -12.412,0 -23.612,5.154 -31.55,13.427 l 6.578,6.534 C 31.281,47.756 40.154,43.627 50,43.627 c 9.846,0 18.719,4.132 24.972,10.733 l 6.575,-6.534 z"
+           inkscape:connector-curvature="0" />
+        <path
+           id="path6425"
+           d="m 62.137,67.109 6.579,-6.534 C 64.066,55.561 57.402,52.417 50,52.417 c -7.404,0 -14.065,3.145 -18.716,8.158 l 6.579,6.534 C 40.822,63.76 45.162,61.644 50,61.644 c 4.838,0 9.178,2.117 12.137,5.465 z"
+           inkscape:connector-curvature="0" />
+        <path
+           id="path6427"
+           d="M 11.728,41.147 C 21.389,31.167 34.962,24.955 50,24.955 c 15.038,0 28.614,6.212 38.272,16.192 L 95,34.464 C 83.619,22.772 67.664,15.502 50,15.502 c -17.664,0 -33.619,7.27 -45,18.962 l 6.728,6.683 z"
+           inkscape:connector-curvature="0" />
+        <ellipse
+           id="ellipse6429"
+           ry="6.8119998"
+           rx="6.8559999"
+           cy="77.685997"
+           cx="50" />
+      </g>
+      <text
+         id="text6431"
+         font-weight="bold"
+         font-size="5px"
+         y="115"
+         x="0"
+         style="font-weight:bold;font-size:5px;font-family:'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif;fill:#000000">Created by Claudio Gomboli</text>
+      <text
+         id="text6433"
+         font-weight="bold"
+         font-size="5px"
+         y="120"
+         x="0"
+         style="font-weight:bold;font-size:5px;font-family:'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif;fill:#000000">from the Noun Project</text>
+    </g>
+  </g>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       transform="translate(137.14286,-499.20133)"
+       id="g8405-2"
+       style="stroke:#ff0000;stroke-opacity:1">
+      <circle
+         r="6.9724412"
+         cy="1016.9291"
+         cx="35.433071"
+         id="path8332-2"
+         style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#ff0000;stroke-width:2;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <circle
+         r="6.9724412"
+         cy="1016.9291"
+         cx="407.48032"
+         id="path8332-0-9"
+         style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#ff0000;stroke-width:2;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <circle
+         r="6.9724412"
+         cy="644.8819"
+         cx="35.433071"
+         id="path8332-7-8"
+         style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#ff0000;stroke-width:2;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <circle
+         r="6.9724412"
+         cy="644.8819"
+         cx="407.48032"
+         id="path8332-6-4"
+         style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#ff0000;stroke-width:2;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <rect
+         ry="70.866142"
+         rx="70.866142"
+         y="608.44879"
+         x="1"
+         height="442.91339"
+         width="442.91339"
+         id="rect8361-4"
+         style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#ff0000;stroke-width:2;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+    </g>
+  </g>
+</svg>
