@@ -1,5 +1,6 @@
 #include "customTypes.h"
 #include <FastLED.h>
+#include <WiFi101.h>
 #include <Math.h>
 
 
@@ -18,6 +19,30 @@ int normalisedHoursFullScale[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3,
 // ==========================================================
 // Neopixel handling
 // ==========================================================
+
+void setupNeopixels() {
+
+  for (int i=0; i< NUM_LEDS; i++) {
+    leds[i] = CRGB::Blue;
+  }
+  
+  // 15 puts it on A0.
+  // 6 - D6 - as used by protoboard at prsent.
+  FastLED.addLeds<NEOPIXEL, 15>(leds, NUM_LEDS); 
+  FastLED.setBrightness(ledBrightness);
+  Serial.println("Neopixels setup...");
+  FastLED.show(); 
+}
+
+void showSetupStageComplete(int stage) {
+    // Set the noses to show startup...
+    setNoseColor(stage-1, CRGB::Green);
+    setFanBackground(stage-1, CRGB::Blue);
+    FastLED.show(); 
+    delay(500);
+}
+
+// =================================================
 
 void SetLedsOnOff(bool newState) {
   ledsEnabled = newState;
@@ -133,6 +158,15 @@ void showOuterValue(int fanId) {
     case DisplayMode::Fancy:
       showFancy(fanId);
       break;
+    case DisplayMode::WiFiStrength:
+      showWiFiStrength(fanId);
+      break;
+    case DisplayMode::OnOff:
+      showOnOff(fanId);
+      break;
+    case DisplayMode::MqttFeed:
+      showMqttFeed(fanId);
+      break;
     case DisplayMode::Automatic:
       showAutomatic(fanId);
       break;
@@ -201,6 +235,15 @@ void showNoseValue(int fanId) {
     case DisplayMode::Fancy:
       showNoseFancy(fanId);
       break;
+    case DisplayMode::WiFiStrength:
+      showNoseWiFiStrength(fanId);
+      break;
+    case DisplayMode::OnOff:
+      showNoseOnOff(fanId);
+      break;
+    case DisplayMode::MqttFeed:
+      showNoseMqttFeed(fanId);
+      break;
     case DisplayMode::Automatic:
       showNoseAutomatic(fanId);
       break;
@@ -220,8 +263,8 @@ void showTemperature(int fanId) {
   // *10 to avoid float usage
   int temperatureFactorised = temperature * temperatureRange.factor;
 
-  Serial.print("Temperature: ");
-  Serial.println(temperature);
+  //Serial.print("Temperature: ");
+  //Serial.println(temperature);
   
   mapToFan(fanId, temperatureFactorised, temperatureRange);
 }
@@ -239,7 +282,6 @@ void showNoseTemperature(int fanId) {
 
 void showHumidity(int fanId) {
   mapToFan(fanId, (int)humidity, humidityRange);
-  Serial.println("Humidity");
 }
 
 void showNoseHumidity(int fanId) {
@@ -383,7 +425,7 @@ void showFanSelectedSpeed(int fanId) {
   // 0..11 - directly maps to the hour.
   int speed = fanInfos[fanId].speedSet;
 
-  setFanBackground(fanId-1, CRGB::Blue);
+  setFanBackground(fanId, CRGB::Blue);
 
   for (int i = 0; i<=speed; i++) {
     setLedByHour(fanId, i, CRGB::Green);
@@ -394,14 +436,14 @@ void showFanSelectedSpeed(int fanId) {
 // 15: Fan Speed
 // ----------------------------------
 void showFanRpmSpeed(int fanId) {
-  displayRange_t displayRange = setupFanDisplayRange(fanId-1);
-  int rpm = fanInfos[fanId-1].computedRpm;
-  mapToFan(fanId-1, rpm, displayRange);
+  displayRange_t displayRange = setupFanDisplayRange(fanId);
+  int rpm = fanInfos[fanId].computedRpm;
+  mapToFan(fanId, rpm, displayRange);
 }
 
 void showNoseFanSpeed(int fanId) {
   // Default to green...
-  setNoseColor(fanId-1, CRGB::Green);
+  setNoseColor(fanId, CRGB::Green);
   
   // but show an error if the speed is low.
   showFanSpeedLowError(fanId);
@@ -412,7 +454,7 @@ void showNoseFanSpeed(int fanId) {
 void showFanSpeedLowError(int fanId) {
  
   // If the power is off then ignore any fan speed setting.
-  if (!master_power) {
+  if (!isFanOn(fanId)) {
     return;
   }
 
@@ -459,7 +501,7 @@ displayRange_t setupFanDisplayRange(int fanId) {
   if (fanInfo.speedSet < 11) {
     range.idealRangeHigh = fanInfo.expectedRpm[fanInfo.speedSet+1]; 
   } else {
-     range.idealRangeHigh = fanInfo.expectedRpm[fanInfo.speedSet] + 50;
+    range.idealRangeHigh = fanInfo.expectedRpm[fanInfo.speedSet] + 50;
   }
 
   // Hack for the -ve value to balance the display.
@@ -477,10 +519,106 @@ int dim=2;
 int8_t gHue = 0; // rotating "base color" used by many of the patterns
 static uint8_t hue = 0;
 
+
 // ----------------------------------
-// ...: Fancy
+// 17: Show the WiFi signal Strength
 // ----------------------------------
-// Automatic - show which ever measurement needs attemption
+void showWiFiStrength(int fanId) {
+ 
+  // Assume -40 and above for rssi is good...
+  if (rssi > -40) {
+    setFanBackground(fanId, CRGB::Green);
+  } else {
+  
+    // hack with +120 se we use only the -ve (red) area.
+    // Use 0,11, 10...1 hour positions to indicate
+    // 0 to -120 RSSI values.
+    // With Green for 0 to -50, 
+    // Blue for -50 to -80
+    // and red below -80.
+    int hour = getRangeHour(rssi, -120, 120);
+  
+    // Set all the LEDs to the background color
+    // then set just the ones appropriate.
+    setFanBackground(fanId, CRGB::Yellow);
+  
+    CRGB color;
+    
+    if (rssi < -80) {
+      color = CRGB::Red;
+    } else if (rssi<-50) {
+      color = CRGB::Blue;
+    } else {
+      color = CRGB::Green;
+    }
+    setLedHourRange(fanId, rssi, wifiDisplayRange, hour, color);
+  }
+}
+
+// Use the nose to show connectivity.
+// Unless connected with a bad signal strength
+void showNoseWiFiStrength(int fanId) {
+  switch (WiFi.status()) {
+    case WL_CONNECTED:
+      if (rssi > -30) {
+        setNoseColor(fanId, CRGB::Green);
+      } else if (rssi > -60) {
+        setNoseColor(fanId, CRGB::Yellow);
+      } else {
+        setNoseColor(fanId, CRGB::Red);
+      }
+      break;
+    case WL_NO_SHIELD:
+    case WL_IDLE_STATUS:
+    case WL_NO_SSID_AVAIL:
+      setNoseColor(fanId, CRGB::Blue);
+      break;
+    case WL_CONNECT_FAILED:
+    case WL_CONNECTION_LOST:
+    case WL_DISCONNECTED:
+      setNoseColor(fanId, CRGB::Red);
+      break;
+    default:
+      // Unknown state.
+      setNoseColor(fanId, CRGB::Blue);
+      break;
+  }
+}
+
+// ----------------------------------
+// 19: On/Off indicator (either red/green, or off/green or white).
+// ----------------------------------
+void showOnOff(int fanId) {
+  if (mqttFeedsValue[fanId] > 0) {
+    setFanBackground(fanId, CRGB::Green);
+  } else {
+    setFanBackground(fanId, CRGB::Red);
+  }
+}
+
+void showNoseOnOff(int fanId) {
+  if (mqttFeedsValue[fanId] > 0) {
+    setNoseColor(fanId, CRGB::Green);
+  } else {
+    setNoseColor(fanId, CRGB::Red);
+  }
+}
+
+// ----------------------------------
+void showMqttFeed(int fanId) {
+  // +/- 11 already
+  int value = mqttFeedsValue[fanId];
+}
+
+void showNoseMqttFeed(int fanId) {
+  // +/- 11 already
+  int value = mqttFeedsValue[fanId];
+}
+
+
+// ----------------------------------
+// 100: Fancy LEDs
+// ----------------------------------
 void showFancy(int fanId) {
 
    fancy_j++;
@@ -626,10 +764,10 @@ int getRangeHour(int value, int minValue, int maxValue) {
 
   // Assumes full scale on the clock (0, 1, 2..11 and 0, 11, 10..1
   if (value > maxValue) {
-    Serial.println("Above max");
+    //Serial.println("Value above max hour display range.");
     return 11;  
   } else if (value < minValue) {
-    Serial.println("below min");
+    //Serial.println("Value below max hour display range.");
     return 1;
   } else {
     // Convert it to a scale of 0..11 for hour lookup
@@ -731,7 +869,7 @@ void setLed(int fanId, int ledId, CRGB color) {
     return;
   }
   
-  int ledIndex = (16 * (fanId-1)) + ledId;
+  int ledIndex = (16 * (fanId)) + ledId;
   leds[ledIndex] = color;
   return;
 }

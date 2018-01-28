@@ -1,29 +1,25 @@
+#include <MQTTClient.h>
+#include <system.h>
+#include <WiFi101.h>
 #include <RTCZero.h>
-
+#include <FastLED.h>
 #include <SparkFunCCS811.h>
 #include "customTypes.h"
 
-#include <FastLED.h>
 
-// Pin Mappins
-int fan_pwm_pins[] = { 2, 3, 4, 5, 10}; // Was 6, now pin D10 - MISO
-int fan_tach_pins[] = { 0, 1, 8, 9, 7 }; // D8 = MOSI, D9 = SCK
-
-int dust_sensor_pin = 6;
-int switch_pins[] = {A1, A2};
-int switch_leds[] = {A3, A3};
-// Only on prototype PCB. Needs to be pulled to GND
-int switch_enable = A5;
-
-int master_power_pin = 13; // RX
-
-// Settings.
-volatile int fan_pulse_count[] = {0,0,0,0,0};
-int fan_computed_rpm[] = {0,0,0,0,0};
-int fan_speed_set[] = {0,0,0,0,0};
+// Global fan info settings.
+// used by LEDs and fan control
+// as well as other places (e.g. setting fan speed).
 // Fans 1,2,3, 4 and 5 , indexed as 0..4
 fanInfo_t fanInfos[5];
 
+int dust_sensor_pin = 6;
+
+// Not used in the fan box.
+//int switch_pins[] = {A1, A2};
+//int switch_leds[] = {A3, A3};
+// Only on prototype PCB. Needs to be pulled to GND
+//int switch_enable = A5;
 
 // 0: Ignore - manual
 // 1: Temperature 
@@ -38,6 +34,12 @@ fanInfo_t fanInfos[5];
 // 11: Pomodoro Work
 // 12: Pomodoro Play
 // 13: Fixed Color
+// 14: lightLevel
+// 15: SelectedFanSpeed (0..11)
+// 16: FanSpeed
+// 17: WiFiStrength
+// 18: OnOff
+// 19: MqttFeed
 // 255: Automatic
 // TODO: Load this from EEPROM or something.
 // Let it be settable via MQTT/Alexa/////
@@ -45,20 +47,19 @@ DisplayMode fanDisplayModes[] = {
   DisplayMode::Temperature, 
   DisplayMode::Humidity, 
   DisplayMode::AirQuality, 
-  DisplayMode::SelectedFanSpeed};
+  DisplayMode::WiFiStrength};
 
 // User selected speed to set the fans to.
-int pwmSpeed = 255;
-int fanMode = 3; // Fan mode. 0=Off, 1=Low, 2=Medium, 3=High, 4 = auto??
-
-// State of the master power selection.
-bool master_power = false;
+//int pwmSpeed = 255;
+//int fanMode = 3; // Fan mode. 0=Off, 1=Low, 2=Medium, 3=High, 4 = auto??
 
 // running LED Index, by "Hour" (0 top, 11 at 11 o'clock...)
 int redHourIndex = 0;
 int lastRedHourIndex = 0;
 CRGB ledsSetColor = CRGB::Red;
-int ledBrightness = 64;
+
+// How bright to make the LEDs.
+int ledBrightness = 32;
 
 //#define NUM_LEDS 24
 // 4 Fans, 16 LEDs per fan = 64
@@ -71,7 +72,13 @@ CRGB leds[NUM_LEDS];
 // If the LEDs are enabled (false = LEDs off - dark)
 bool ledsEnabled = true;
 
-// Fake values...
+// --------------------------------
+// Sensors
+// --------------------------------
+// When the sensors should next be read
+unsigned long nextSensorRead = 0;
+
+// What sensors are attached.
 bool hasBme280 = false;
 bool hasBme680 = false;
 bool hasCCS811 = false;
@@ -82,11 +89,33 @@ float humidity = 50;
 float temperature = 22;
 float pressure = 1015.2;
 
+// TODO: 680 toc/air quality
+
 // CCS811
 long ccs811DataUsableAfter;
 unsigned int ccsBaseline;
 unsigned int tVOC = 0;
 unsigned int eCO2 = 400;
+
+int light = 34;
+
+// measured rssi.
+int rssi;
+
+// =============================================
+
+// External MQTT feeds (0..3).
+// These should be mapped to the fan they are displayed on
+// or the other way around (i.e. feed[2] of interest, 
+// used fan[2] to show that.
+String mqttFeedsTopic[4] = {"/Radiation/cpm", "", "", ""};
+
+// TODO: The feed value should be normalised into 23 steps with
+// 0 = desired value. +11 high, -11 low.
+// If the value never goes below the desited valus
+// then still use +/-11 just the -1..-11 is never displayed.
+// For on/off, anything > than 0 is on.
+int mqttFeedsValue[4] = {0,0,0,0};
 
 RTCZero rtc;
 
@@ -96,105 +125,212 @@ displayRange_t humidityRange;
 displayRange_t pressureRange;
 displayRange_t airQualityRange;
 displayRange_t dustRange;
+displayRange_t wifiDisplayRange;
 
+// LED 1 Nose Green: Fans and Neopixel setup done.
+// LED 2 Nose Green: Serial port wait done.
+// LED 3 Nose Green: WiFi done.
+// LED 4 Nose Green: MQTT done.
 // the setup function runs once when you press reset or power the board
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
-
-  // Switch off the 12V to the fans (TODO: Pull down resistor).
-  pinMode (master_power_pin, OUTPUT);
-  digitalWrite(master_power_pin, LOW);
-
-  SetupNeopixels();
+  
+  // Small (diagnostic) reboot delay
   delay(1000);
+
+  setupFans();
+  setupNeopixels();
   showSetupStageComplete(1);
+  delay(1000);
    
   //Initialize serial:
   Serial.begin(9600);
-  delay(5000);
+  serialConnectDelay();
   Serial.println("Serial setup complete");
   showSetupStageComplete(2);
 
+  // Setup the display ranges used to show values
+  // on the fans.
   temperatureRange = setupTemperatureDisplayRange();
   humidityRange = setupHumidityDisplayRange();
   pressureRange = setupPressureDisplayRange();
   airQualityRange = setupAirQualityDisplayRange();
+  wifiDisplayRange = setupWiFiDisplayRange();
 
-  fanInfos[0] = setUpFan1(2, 0);
-  fanInfos[1] = setUpFan2(3, 1);
-  fanInfos[2] = setUpFan3(4, 8);
-  fanInfos[3] = setUpFan4(5, 9);
-  fanInfos[4] = setUpFan5(10, 7);
-  Serial.println("FanInfo's done");
+  setupWiFi();
   showSetupStageComplete(3);
 
+  // TODO: Get time from NTP server
   rtc.begin();
   //rtc.setTime(04, 40, 20);
   //rtc.setDate(21, 01, 2018);
+  printCurrentDateTime();
   delay(2000);
+
+  setupMqtt();
   showSetupStageComplete(4);
   
-  Serial.println("Boff version 0.1");
-  Serial.println("");
+  Serial.println("Boff version 0.1.1");
+  Serial.println("------------------------------------------");
 }
 
-
-void SetupNeopixels() {
-
-  for (int i=0; i< NUM_LEDS; i++) {
-    leds[i] = CRGB::Red;
+void serialConnectDelay() {
+  for (int i = 0; i<10; i++) {
+    Serial.print("Serial wait ");
+    Serial.print(i+1);
+    Serial.println("......");
+    delay(1000);
   }
-  
-  // 15 puts it on A0.
-  // 6 - D6 - as used by protoboard at prsent.
-  FastLED.addLeds<NEOPIXEL, 15>(leds, NUM_LEDS); 
-  Serial.println("Neopixels setup...");
-  FastLED.show(); 
-
-  FastLED.setBrightness(ledBrightness);
-  FastLED.show(); 
 }
 
-void showSetupStageComplete(int stage) {
-    // Set the noses to show startup...
-    setNoseColor(stage, CRGB::Green);
-    setFanBackground(stage, CRGB::Yellow);
-    FastLED.show(); 
-    delay(500);
+
+
+void printCurrentDateTime() {
+  // Print date...
+  print2digits(rtc.getDay());
+  Serial.print("/");
+  print2digits(rtc.getMonth());
+  Serial.print("/");
+  print2digits(rtc.getYear());
+  Serial.print(" ");
+
+  // ...and time
+  print2digits(rtc.getHours());
+  Serial.print(":");
+  print2digits(rtc.getMinutes());
+  Serial.print(":");
+  print2digits(rtc.getSeconds());
+
+  Serial.println();
+}
+
+void print2digits(int number) {
+  if (number < 10) {
+    Serial.print("0"); // print a 0 before if the number is < than 10
+  }
+  Serial.print(number);
 }
 
 // ==============================================================
 // Loop functions
 // ==============================================================
 
-int loopCounter = 0;
-long lastAirMonitor = 0;
-bool up = true;
 
-// the loop function runs over and over again forever
+unsigned long loop_start;
+unsigned long loop_took;
+
 void loop() {
-  //loopCounter++;
+  loop_start = millis();
   digitalWrite(LED_BUILTIN, HIGH); // D6 used for input for dust sensor when fitted.
   delay(100);
 
-  loopFans();
+  if (nextSensorRead < millis()) {
+    Serial.println("Read sensors...");
+    // meausre other sensors...
+    measureRssi();
+
+    // refresh every n seconds
+    nextSensorRead = millis() + 10 * 1000;
+  }
+
+  fansLoop();
   readInput();
   handleNeopixels();
 
-  
+  mqttLoop();
+  printHeader();
+  printInfo();
+
   digitalWrite(LED_BUILTIN, LOW);    
   delay(100);
+
+  loop_took = millis() - loop_start;
+  //Serial.print("Loop took: ");
+  //Serial.print(loop_took);
+  //Serial.println("ms");
 }
 
 // Loop handler to update the Neopixels (i.e. LED leds + possible others)
 // code for this is in the displayLeds file.
 void handleNeopixels() {
   updateFansLeds();
-  //updateStrip1Leds();
-  //updateStrip2Leds();
+  updateStrip1Leds();
+  updateStrip2Leds();
   endLedUpdate();
 
   FastLED.show(); 
+}
+
+unsigned long lastPrintInfo = 0;
+unsigned long lastHeaderPrinted = 0;
+void printInfo() {
+  // Print only once per...
+  if (lastPrintInfo + 500 > millis()) {
+    return;
+  }
+
+  Serial.print(temperature);
+  Serial.print("\t");
+  Serial.print(humidity);
+  Serial.print("\t");
+  Serial.print(pressure);
+  Serial.print("\t");
+  Serial.print(eCO2);
+  Serial.print("\t");
+  Serial.print(tVOC);
+  Serial.print("\t");
+  Serial.print(light);
+  Serial.print("\t");  
+  Serial.print(rssi);
+  Serial.print("\t");
+  // Assume all fans have the same set speed.
+  Serial.print(fanInfos[0].speedSet);
+  Serial.print("\t[");
+  for (int fanId=0; fanId<4;fanId++) {
+    Serial.print(fanInfos[fanId].computedRpm);
+    Serial.print("\t");
+  }
+  Serial.print("]\t[");
+  for (int fanId=0; fanId<4;fanId++) {
+    Serial.print(fanDisplayModes[fanId]);
+    Serial.print("\t");
+  }
+  Serial.print("\t");
+  Serial.println();
+
+  lastPrintInfo = millis();
+}
+
+void printHeader() {
+  // Print only once per n samples.
+  if (lastHeaderPrinted + 20000 > millis()) {
+    return;
+  }
+  Serial.print("T/°C: ");
+  Serial.print("\t");
+  Serial.print("RH /%: ");
+  Serial.print("\t");
+  Serial.print("BP: ");
+  Serial.print("\t");
+  Serial.print("eCO2: ");
+  Serial.print("\t");
+  Serial.print("TVOC: ");
+  Serial.print("\t");
+  Serial.print("Light: ");
+  Serial.print("\t");
+  Serial.print("RSSI: ");
+  Serial.print("\t");
+  Serial.print("Speed: ");
+  Serial.print("\t");
+  Serial.print("RPMs: ");
+  Serial.print("\t\t\t\t");
+  Serial.print("\t");
+  Serial.print("Display Mode: ");
+  Serial.print("\t\t\t\t");
+  Serial.print("\t");
+  Serial.println();
+
+  lastHeaderPrinted = millis();
 }
 
 int selectedFanId = 1;
@@ -209,55 +345,16 @@ void readInput() {
 
     switch (instruction) {
       case '0':
-        setLed(selectedFanId, 0, ledsSetColor);
+        setFansSpeed(0);
         break;
       case '1':
-        setLed(selectedFanId, 1, ledsSetColor);
+        setFansSpeed(1);
         break;
       case '2':
-        setLed(selectedFanId, 2, ledsSetColor);
+        setFansSpeed(7);
         break;
       case '3':
-        setLed(selectedFanId, 3, ledsSetColor);
-        break;
-      case '4':
-        setLed(selectedFanId, 4, ledsSetColor);
-        break;
-      case '5':
-        setLed(selectedFanId, 5, ledsSetColor);
-        break;
-      case '6':
-        setLed(selectedFanId, 6, ledsSetColor);
-        break;
-      case '7':
-        setLed(selectedFanId, 7, ledsSetColor);
-        break;
-      case '8':
-        setLed(selectedFanId, 8, ledsSetColor);
-        break;
-      case '9':
-        setLed(selectedFanId, 9, ledsSetColor);
-        break;
-      case 'a':
-        setLed(selectedFanId, 10, ledsSetColor);
-        break;
-      case 'b':
-        setLed(selectedFanId, 11, ledsSetColor);
-        break;
-      case 'c':
-        setLed(selectedFanId, 12, ledsSetColor);
-        break;
-      case 'd':
-        setLed(selectedFanId, 13, ledsSetColor);
-        break;
-      case 'e':
-        setLed(selectedFanId, 14, ledsSetColor);
-        break;
-      case 'f':
-        setLed(selectedFanId, 15, ledsSetColor); // Should be the last LED on the first fan (16 LEDs, 0..15)
-        break;
-      case 'g': // First LED on next fan... 
-        setLed(selectedFanId, 16, ledsSetColor);
+        setFansSpeed(11);
         break;
       case 't': // temperature fan
         Serial.println("Fan 1 selected.");
@@ -293,62 +390,49 @@ void readInput() {
         humidity +=2;
         eCO2 +=100;
         pressure +=25;
-        for (int i=0; i<4; i++) {
-          fanInfos[i].computedRpm+=100;
-          fanInfos[i].speedSet++;
-          if (fanInfos[i].speedSet > 11) {
-            fanInfos[i].speedSet = 11;
-          }
-        }
         break;
       case '-':
         temperature -=0.25;
         humidity -=2;
         eCO2 -=100;
         pressure -=25;
-        for (int i=0; i<4; i++) {
-          fanInfos[i].computedRpm -=100;
-          fanInfos[i].speedSet--;
-          if (fanInfos[i].speedSet < 0) {
-            fanInfos[i].speedSet = 0;
-          }
-        }
         break;
       case 'm':
-        master_power = !master_power;
-        Serial.print("Toggling master power. Now: ");
-        Serial.print(master_power);
-        Serial.println();
+        setPower(true);
         break;
-        case '>':
-          ledBrightness+= 10;
-          if (ledBrightness > 255){
-            ledBrightness = 255;
-          }
-          break;
-        case '<':
-          ledBrightness-= 10;
-          if (ledBrightness <= 0){
-            ledBrightness = 0;
-          }
-          break;
+      case 'n':
+        setPower(false);       
+        break;
+      case '>':
+        ledBrightness+= 10;
+        if (ledBrightness > 255){
+          ledBrightness = 255;
+        }
+        break;
+      case '<':
+        ledBrightness-= 10;
+        if (ledBrightness <= 0){
+          ledBrightness = 0;
+        }
+        break;
       default:
-        Serial.println("Unknown instruction. Select: 0..F, t, h, p, q");
-        Serial.println("0..f - HEX Led Index");
+        Serial.println("Unknown instruction. Select: 0..3, t, h, p, q, o, +/-, m, n, <, >");
+        Serial.println("0..3 - Fan speed (0, 1, 7, 11)");
         Serial.println("t - Select [t]emperature fan");
         Serial.println("h - Select [h]umidity fan");
         Serial.println("p - Select [p]ressure fan");
         Serial.println("q - Select air [q]uality fan");
         Serial.println("o - all LEDs [o]ff");
-        Serial.println("+/i - increase/decrease faked values");
-        Serial.println("m - toggle [m]aster power for fans");
+        Serial.println("+/- - increase/decrease faked values");
+        Serial.println("m - [m]aster power on");
+        Serial.println("n - [m]aster power off");
         Serial.println("> - brighter");
         Serial.println("< - dimmer");
         break;
     }
 
     updateFanSpeeds();
-    printVariables();
+    //printVariables();
   }
 }
 
@@ -363,8 +447,6 @@ void printVariables() {
   Serial.print(eCO2);
   Serial.print(", fan speed: ");
   Serial.print(fanInfos[selectedFanId-1].speedSet);
-  Serial.print(", fan Rpm: ");
-  Serial.print(fanInfos[selectedFanId-1].computedRpm);
   Serial.println();
 }
 
@@ -462,105 +544,31 @@ displayRange_t setupAirQualityDisplayRange() {
   return range;
 }
 
+// WiFi range...
+// 0 to -120 (0 = best).
+// map to +/-60.
+displayRange_t setupWiFiDisplayRange() {
+  float idealValue = 0;
+  int factor = 1;
 
-// ============================================
-// Setup fan parameters
-// ============================================
+  displayRange_t range;
+  range.idealValue = idealValue;
 
-fanInfo_t setUpFan1(int pwm_pin, int tach_pin) {
-  fanInfo_t fanInfo;
-  fanInfo.pwmPin = pwm_pin;
-  fanInfo.tachPin = tach_pin;
-  fanInfo.enabled = true;
-  fanInfo.pulseCount = 0;
-  // Current RPM computed from pulse counts
-  fanInfo.computedRpm = 0;
-  // Array of RPM's expected indexed by fanModel
-  // e.g. [0] = 0, [1] = 400, [2] = 600, [3] = 800, ... [11]
-  // Leave as defaults
-  //fanInfo.expectedRpm[0] = 0;
-  fanInfo.speedSet = 0;
-  fanInfo.pulseToRpmFactor = 1; // 1, 2, or 4 typically.
-  fanInfo.outerColor = CRGB::Green;
-  fanInfo.noseColor = CRGB::Orange;
-  return fanInfo;
+  // Anything 20-60 (i.e. -40 to 0)
+  range.idealRangeLow = 20;  // i.e. RSSI = -40 (value - 60)
+  range.idealRangeHigh = 60;  // i.e. RSSI = 0
+
+  // Hack for the -ve value to balance
+  // the display.
+  range.minValue = -60;
+  range.maxValue = 60;  // 
+
+  range.factor = factor;
+  // todo: offset? (e.g. +60 here).
+  return range;
 }
 
-fanInfo_t  setUpFan2(int pwm_pin, int tach_pin) {
-  fanInfo_t fanInfo;
-  fanInfo.pwmPin = pwm_pin;
-  fanInfo.tachPin = tach_pin;
-  fanInfo.enabled = true;
-  fanInfo.pulseCount = 0;
-  // Current RPM computed from pulse counts
-  fanInfo.computedRpm = 0;
-  // Array of RPM's expected indexed by fanModel
-  // e.g. [0] = 0, [1] = 400, [2] = 600, [3] = 800, ... [11]
-  // Leave as defaults
-  //fanInfo.expectedRpm[0] = 0;
-  fanInfo.speedSet = 0;
-  fanInfo.pulseToRpmFactor = 1; // 1, 2, or 4 typically.
-  fanInfo.outerColor = CRGB::Green;
-  fanInfo.noseColor = CRGB::Blue;
-  return fanInfo;
-}
 
-fanInfo_t  setUpFan3(int pwm_pin, int tach_pin) {
-  fanInfo_t fanInfo;
-  fanInfo.pwmPin = pwm_pin;
-  fanInfo.tachPin = tach_pin;
-  fanInfo.enabled = true;
-  fanInfo.pulseCount = 0;
-  // Current RPM computed from pulse counts
-  fanInfo.computedRpm = 0;
-  // Array of RPM's expected indexed by fanModel
-  // e.g. [0] = 0, [1] = 400, [2] = 600, [3] = 800, ... [11]
-  // Leave as defaults
-  //fanInfo.expectedRpm[0] = 0;
-  fanInfo.speedSet = 0;
-  fanInfo.pulseToRpmFactor = 1; // 1, 2, or 4 typically.
-  fanInfo.outerColor = CRGB::Green;
-  fanInfo.noseColor = CRGB::Orange;
-  return fanInfo;
-}
-
-fanInfo_t  setUpFan4(int pwm_pin, int tach_pin) {
-  fanInfo_t fanInfo;
-  fanInfo.pwmPin = pwm_pin;
-  fanInfo.tachPin = tach_pin;
-  fanInfo.enabled = true;
-  fanInfo.pulseCount = 0;
-  // Current RPM computed from pulse counts
-  fanInfo.computedRpm = 0;
-  // Array of RPM's expected indexed by fanModel
-  // e.g. [0] = 0, [1] = 400, [2] = 600, [3] = 800, ... [11]
-  // Leave as defaults
-  //fanInfo.expectedRpm[0] = 0;
-  fanInfo.speedSet = 0;
-  fanInfo.pulseToRpmFactor = 1; // 1, 2, or 4 typically.
-  fanInfo.outerColor = CRGB::Green;
-  fanInfo.noseColor = CRGB::Orange;
-  return fanInfo;
-}
-
-fanInfo_t setUpFan5(int pwm_pin, int tach_pin) {
-  fanInfo_t fanInfo;
-  fanInfo.pwmPin = pwm_pin;
-  fanInfo.tachPin = tach_pin;
-  fanInfo.enabled = false; // not fitted
-  fanInfo.pulseCount = 0;
-  // Current RPM computed from pulse counts
-  fanInfo.computedRpm = 0;
-  // Array of RPM's expected indexed by fanModel
-  // e.g. [0] = 0, [1] = 400, [2] = 600, [3] = 800, ... [11]
-  // Leave as defaults
-  //fanInfo.expectedRpm[0] = 0;
-  fanInfo.speedSet = 0;
-  fanInfo.pulseToRpmFactor = 1; // 1, 2, or 4 typically.
-  fanInfo.outerColor = CRGB::Green;
-  fanInfo.noseColor = CRGB::Orange;
-  return fanInfo;
-}
 
 
 

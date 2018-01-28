@@ -23,6 +23,9 @@ typedef enum {
     SelectedFanSpeed = 15, // done
     // Fan Speed in RPM
     FanSpeed = 16, // broken
+    WiFiStrength = 17, // TODO
+    OnOff = 18, // TODO
+    MqttFeed = 19, // TODO
     Fancy = 100,
     Automatic = 255, // todo
 } DisplayMode;
@@ -56,6 +59,10 @@ typedef DisplayRangeType displayRange_t;
 
 
 struct FanInfoType {
+  // The fan Id (1..4) rather than the index in the array
+  // a more user friendly (and aligned with the PCB labels!)
+  int fanId;
+  
   // Control pin for the fan
   int pwmPin;
   
@@ -66,18 +73,28 @@ struct FanInfoType {
   bool enabled;
   
   // The count of the pulses.
-  volatile int pulseCount;
+  int pulseCount;
   
   // Current RPM computed from pulse counts
   int computedRpm;
   
   // 0..11. Use speedPwm to get the PWM value for the set speet.
   // Uses 0..11 as it displays nicely on the 12 pixel fan LED display
+  // This is the requested speed for the fan. See currentSpeed for the 
+  // current fan speed
   int speedSet;   
+
+  // May be different to the speedSet if this has not
+  // yet been actionsed.
+  int currentSpeed = 12;
+
+  // The currently set PWM value for the fan
+  // debug/diagnostic use only
+  int currentPwm = 0;
 
   // Indexed by speedSet, pwm value to use at each setting
   // i.e. how fast to run the fan at that speed.
-  int speedPwm[12] = {0, 23, 46, 69, 92, 115, 138, 161, 184, 207, 230, 255};
+  int speedPwm[12] = {0, 23, 46, 69, 92, 115, 138, 180, 200, 220, 240, 255};
   
   // Array of RPM's expected RPMs indexed by speedSet (0..11)
   // i.e. how fast we expect the fan to be going at a selected speed.
@@ -85,7 +102,7 @@ struct FanInfoType {
   int expectedRpm[12] = {0, 100, 800, 800, 800, 800, 1200, 1200, 1200, 1500, 1500, 1500};
   
   // How many pulses the fan makes for each RPM
-  int pulseToRpmFactor = 1; // 1, 2, or 4 typically.
+  int pulseToRpmFactor = 4; // 1, 2, or 4 typically.
 
   // Prefered fan (outer) color for fixed colours.
   CRGB outerColor;
