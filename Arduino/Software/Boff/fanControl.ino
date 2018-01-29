@@ -131,8 +131,10 @@ void setPower(bool state) {
 
   if (master_power) {
     Serial.println("Power ON");
+    publishTinamousStatus("Fan Power ON");
   } else {
     Serial.println("Power OFF");
+    publishTinamousStatus("Fan Power Off");
   }
 }
 
@@ -154,8 +156,15 @@ bool isFanOn(int fanId) {
 
 // Set the speed of the fans
 void setFansSpeed(int speed) {
- for (int i=0; i<4; i++) {
+  String message;
+  message = "Setting fan speed to ";
+  message = message + speed;
+  
+  publishTinamousStatus(message);
+  
+  for (int i=0; i<4; i++) {
     fanInfos[i].speedSet = speed;
+    
     if (fanInfos[i].speedSet > 11) {
       fanInfos[i].speedSet = 11;
     }
