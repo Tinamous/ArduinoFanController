@@ -12088,14 +12088,14 @@ B340A  3A 40V SMA &lt;br&gt;</description>
 <parts>
 <part name="FRAME1" library="SparkFun-Aesthetics" deviceset="FRAME-LETTER" device=""/>
 <part name="IC1" library="v-reg" deviceset="78XXS" device=""/>
-<part name="C1" library="SparkFun-Capacitors" deviceset="1UF-25V-10%(0805)" device="&quot;"/>
-<part name="C2" library="SparkFun-Capacitors" deviceset="1UF-25V-10%(0805)" device="&quot;"/>
+<part name="C1" library="SparkFun-Capacitors" deviceset="1UF-25V-10%(0805)" device="&quot;" value="0.1uF"/>
+<part name="C2" library="SparkFun-Capacitors" deviceset="1UF-25V-10%(0805)" device="&quot;" value="0.1uF"/>
 <part name="H1" library="holes" deviceset="MOUNT-HOLE" device="3.2"/>
 <part name="H2" library="holes" deviceset="MOUNT-HOLE" device="3.2"/>
 <part name="H3" library="holes" deviceset="MOUNT-HOLE" device="3.2"/>
 <part name="H4" library="holes" deviceset="MOUNT-HOLE" device="3.2"/>
 <part name="D1" library="SparkFun-LED" deviceset="LED" device="1206-BOTTOM"/>
-<part name="R1" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES"/>
+<part name="R1" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="1k"/>
 <part name="GND1" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND3" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="SUPPLY1" library="SparkFun-Aesthetics" deviceset="12V" device=""/>
@@ -12105,20 +12105,23 @@ B340A  3A 40V SMA &lt;br&gt;</description>
 <part name="JP110" library="SparkFun-Connectors" deviceset="POWER_JACK" device="PTH"/>
 <part name="SUPPLY12" library="SparkFun-Aesthetics" deviceset="12V" device=""/>
 <part name="GND11" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="C3" library="SparkFun-Capacitors" deviceset="1UF-25V-10%(0805)" device="&quot;"/>
+<part name="C3" library="SparkFun-Capacitors" deviceset="1UF-25V-10%(0805)" device="&quot;" value="1uF"/>
 <part name="SUPPLY14" library="SparkFun-Aesthetics" deviceset="3.3V" device=""/>
 <part name="GND12" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="LOGO3" library="SparkFun-Aesthetics" deviceset="OSHW-LOGO" device="M"/>
-<part name="C7" library="SparkFun-Capacitors" deviceset="1UF-25V-10%(0805)" device="&quot;"/>
+<part name="C7" library="SparkFun-Capacitors" deviceset="1UF-25V-10%(0805)" device="&quot;" value="0.1uF"/>
 <part name="SUPPLY17" library="SparkFun-Aesthetics" deviceset="3.3V" device=""/>
 <part name="GND15" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="IC2" library="Arduino" deviceset="ARDUINO_MKRFOX1200" device="PROTOPADS" value="ARDUINO_MKRFOX1200PROTOPADS"/>
 <part name="SUPPLY18" library="SparkFun-Aesthetics" deviceset="3.3V" device=""/>
 <part name="GND16" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="R28" library="SparkFun-Resistors" deviceset="RESISTOR" device="1206" value="300R"/>
+<part name="R28" library="SparkFun-Resistors" deviceset="RESISTOR" device="1206" value="1k"/>
 <part name="D2" library="SparkFun-LED" deviceset="LED-RED" device="1206" value="12V"/>
 <part name="GND2" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="JP6" library="SparkFun-Connectors" deviceset="M04" device="POLAR" value="Fan1"/>
+<part name="JP6" library="SparkFun-Connectors" deviceset="M04" device="POLAR" value="Fan1">
+<attribute name="FARNELL" value="2313705"/>
+<attribute name="MOLEX" value="47053-1000"/>
+</part>
 <part name="JP8" library="SparkFun-Connectors" deviceset="M04" device="POLAR" value="Fan2"/>
 <part name="JP9" library="SparkFun-Connectors" deviceset="M04" device="POLAR" value="Fan3"/>
 <part name="JP13" library="SparkFun-Connectors" deviceset="M04" device="POLAR" value="Fan4"/>
@@ -12136,8 +12139,12 @@ B340A  3A 40V SMA &lt;br&gt;</description>
 <part name="JP37" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED6"/>
 <part name="GND21" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND22" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="Q1" library="SparkFun-DiscreteSemi" deviceset="MOSFET-PCHANNEL" device="" value="IRLML9301TRPBF"/>
-<part name="Q2" library="SparkFun-DiscreteSemi" deviceset="MOSFET-NCHANNEL" device="AO3404A" value="2N7002"/>
+<part name="Q1" library="SparkFun-DiscreteSemi" deviceset="MOSFET-PCHANNEL" device="" value="IRLML930">
+<attribute name="FARNELL" value="1831089"/>
+</part>
+<part name="Q2" library="SparkFun-DiscreteSemi" deviceset="MOSFET-NCHANNEL" device="AO3404A" value="2N7002">
+<attribute name="FARNELL" value="1510761"/>
+</part>
 <part name="R20" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="100k"/>
 <part name="R21" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="10R"/>
 <part name="GND23" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
@@ -12182,9 +12189,13 @@ B340A  3A 40V SMA &lt;br&gt;</description>
 <part name="GND35" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="SUPPLY24" library="SparkFun-Aesthetics" deviceset="VIN" device=""/>
 <part name="SUPPLY25" library="SparkFun-Aesthetics" deviceset="VIN" device=""/>
-<part name="Q3" library="SparkFun-DiscreteSemi" deviceset="MOSFET-NCHANNEL" device="AO3404A" value="2N7002"/>
+<part name="Q3" library="SparkFun-DiscreteSemi" deviceset="MOSFET-NCHANNEL" device="AO3404A" value="2N7002">
+<attribute name="FARNELL" value="1510761"/>
+</part>
 <part name="R18" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="10R"/>
-<part name="Q4" library="SparkFun-DiscreteSemi" deviceset="MOSFET-PCHANNEL" device="" value="IRLML9301TRPBF"/>
+<part name="Q4" library="SparkFun-DiscreteSemi" deviceset="MOSFET-PCHANNEL" device="" value="IRLML930">
+<attribute name="FARNELL" value="1831089"/>
+</part>
 <part name="R19" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="100k"/>
 <part name="SUPPLY26" library="SparkFun-Aesthetics" deviceset="12V" device=""/>
 <part name="GND36" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
@@ -12195,7 +12206,7 @@ B340A  3A 40V SMA &lt;br&gt;</description>
 <part name="C6" library="SparkFun-Capacitors" deviceset="1UF-25V-10%(0805)" device="&quot;"/>
 <part name="SUPPLY2" library="SparkFun-Aesthetics" deviceset="VIN" device=""/>
 <part name="GND6" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="R2" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="40k"/>
+<part name="R2" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="43k"/>
 <part name="R3" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="10k"/>
 <part name="GND7" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 </parts>
@@ -12331,7 +12342,10 @@ LED supply option</text>
 </instance>
 <instance part="D2" gate="G$1" x="170.18" y="48.26" rot="R90"/>
 <instance part="GND2" gate="1" x="177.8" y="43.18"/>
-<instance part="JP6" gate="G$1" x="139.7" y="76.2"/>
+<instance part="JP6" gate="G$1" x="139.7" y="76.2">
+<attribute name="FARNELL" x="139.7" y="76.2" size="1.778" layer="96" display="off"/>
+<attribute name="MOLEX" x="139.7" y="76.2" size="1.778" layer="96" display="off"/>
+</instance>
 <instance part="JP8" gate="G$1" x="167.64" y="76.2"/>
 <instance part="JP9" gate="G$1" x="195.58" y="76.2"/>
 <instance part="JP13" gate="G$1" x="223.52" y="76.2"/>
@@ -12351,16 +12365,14 @@ LED supply option</text>
 <instance part="GND22" gate="1" x="129.54" y="15.24"/>
 <instance part="Q1" gate="G$1" x="40.64" y="96.52" smashed="yes" rot="R180">
 <attribute name="NAME" x="38.1" y="101.6" size="1.778" layer="95" rot="R180"/>
+<attribute name="FARNELL" x="40.64" y="96.52" size="1.778" layer="96" rot="R180" display="off"/>
 </instance>
 <instance part="Q2" gate="G$1" x="58.42" y="96.52" smashed="yes" rot="R90">
 <attribute name="NAME" x="58.674" y="102.87" size="1.778" layer="95" rot="R180"/>
+<attribute name="FARNELL" x="58.42" y="96.52" size="1.778" layer="96" rot="R90" display="off"/>
 </instance>
-<instance part="R20" gate="G$1" x="50.8" y="104.14" smashed="yes" rot="R90">
-<attribute name="VALUE" x="54.102" y="100.33" size="1.778" layer="96" rot="R90"/>
-</instance>
-<instance part="R21" gate="G$1" x="58.42" y="81.28" smashed="yes" rot="R270">
-<attribute name="VALUE" x="55.118" y="85.09" size="1.778" layer="96" rot="R270"/>
-</instance>
+<instance part="R20" gate="G$1" x="50.8" y="104.14" rot="R90"/>
+<instance part="R21" gate="G$1" x="58.42" y="81.28" rot="R270"/>
 <instance part="GND23" gate="1" x="20.32" y="81.28"/>
 <instance part="GND24" gate="1" x="66.04" y="88.9"/>
 <instance part="D3" gate="G$1" x="12.7" y="40.64" smashed="yes">
@@ -12420,12 +12432,12 @@ LED supply option</text>
 </instance>
 <instance part="JP5" gate="G$1" x="276.86" y="78.74"/>
 <instance part="R16" gate="G$1" x="299.72" y="71.12" smashed="yes" rot="R90">
-<attribute name="NAME" x="299.2374" y="62.992" size="1.778" layer="95" rot="R90"/>
-<attribute name="VALUE" x="301.752" y="74.422" size="1.778" layer="96" rot="R90"/>
+<attribute name="NAME" x="297.688" y="73.1774" size="1.778" layer="95" rot="R180"/>
+<attribute name="VALUE" x="298.958" y="70.612" size="1.778" layer="96" rot="R180"/>
 </instance>
 <instance part="R17" gate="G$1" x="299.72" y="58.42" smashed="yes" rot="R90">
-<attribute name="NAME" x="299.2374" y="50.292" size="1.778" layer="95" rot="R90"/>
-<attribute name="VALUE" x="301.752" y="61.722" size="1.778" layer="96" rot="R90"/>
+<attribute name="NAME" x="305.308" y="57.9374" size="1.778" layer="95" rot="R180"/>
+<attribute name="VALUE" x="300.482" y="58.928" size="1.778" layer="96"/>
 </instance>
 <instance part="GND34" gate="1" x="287.02" y="71.12"/>
 <instance part="GND35" gate="1" x="299.72" y="50.8"/>
@@ -12433,16 +12445,14 @@ LED supply option</text>
 <instance part="SUPPLY25" gate="G$1" x="287.02" y="83.82"/>
 <instance part="Q3" gate="G$1" x="111.76" y="101.6" smashed="yes" rot="R90">
 <attribute name="NAME" x="112.014" y="107.95" size="1.778" layer="95" rot="R180"/>
+<attribute name="FARNELL" x="111.76" y="101.6" size="1.778" layer="96" rot="R90" display="off"/>
 </instance>
-<instance part="R18" gate="G$1" x="111.76" y="86.36" smashed="yes" rot="R270">
-<attribute name="VALUE" x="108.458" y="90.17" size="1.778" layer="96" rot="R270"/>
-</instance>
+<instance part="R18" gate="G$1" x="111.76" y="86.36" rot="R270"/>
 <instance part="Q4" gate="G$1" x="91.44" y="101.6" smashed="yes" rot="R180">
 <attribute name="NAME" x="88.9" y="106.68" size="1.778" layer="95" rot="R180"/>
+<attribute name="FARNELL" x="91.44" y="101.6" size="1.778" layer="96" rot="R180" display="off"/>
 </instance>
-<instance part="R19" gate="G$1" x="99.06" y="109.22" smashed="yes">
-<attribute name="VALUE" x="95.25" y="105.918" size="1.778" layer="96"/>
-</instance>
+<instance part="R19" gate="G$1" x="99.06" y="109.22"/>
 <instance part="SUPPLY26" gate="G$1" x="83.82" y="109.22" rot="R90"/>
 <instance part="GND36" gate="1" x="119.38" y="93.98"/>
 <instance part="R22" gate="G$1" x="111.76" y="71.12" smashed="yes" rot="R270">
@@ -12450,9 +12460,7 @@ LED supply option</text>
 <attribute name="VALUE" x="108.458" y="74.93" size="1.778" layer="96" rot="R270"/>
 </instance>
 <instance part="GND37" gate="1" x="111.76" y="60.96"/>
-<instance part="R23" gate="G$1" x="58.42" y="68.58" smashed="yes" rot="R270">
-<attribute name="VALUE" x="55.118" y="72.39" size="1.778" layer="96" rot="R270"/>
-</instance>
+<instance part="R23" gate="G$1" x="58.42" y="68.58" rot="R270"/>
 <instance part="GND38" gate="1" x="58.42" y="58.42"/>
 <instance part="C6" gate="G$1" x="264.16" y="78.74"/>
 <instance part="SUPPLY2" gate="G$1" x="264.16" y="83.82"/>
