@@ -19,7 +19,7 @@ void setupFans() {
   fanInfos[0] = setUpFan1(2, 0);
   fanInfos[1] = setUpFan2(3, 1);
   fanInfos[2] = setUpFan3(4, 8);
-  fanInfos[3] = setUpFan4(5, 9);
+  fanInfos[3] = setUpFan4(5, 9); // Not listed as interrupt source on tech specs.
   fanInfos[4] = setUpFan5(10, 7);
   
   // Setup the fan PWMs and tach.
@@ -29,13 +29,17 @@ void setupFans() {
     pinMode(fanInfos[i].tachPin, INPUT_PULLUP);
   }
 
-  // MKR1000 Rev.1: Pins [0], [1], 4, 5, 6, [7], [8], [9], A1, A2 (We're using, 0, 1, 8, 9 and 7 for fan tach)
+  // MKR1000 Rev.1: Pins [0], [1], 4, 5, 6, [7], [8], ([9]), A1/16, A2/17 (We're using, 0, 1, 8, 9 and 7 for fan tach)
+  // Pin 9 not listed on main MKR1000 page as supporting interrupt
+  // but is listed on attachInterrupt for Rev1.
   // and A2 + A3 for switches (A3 can probably be ignored.
   // Zero all digital pins, except 4
   attachInterrupt(fanInfos[0].tachPin, fan_one_pulse, FALLING); 
   attachInterrupt(fanInfos[1].tachPin, fan_two_pulse, FALLING);
   attachInterrupt(fanInfos[2].tachPin, fan_three_pulse, FALLING);
-  attachInterrupt(fanInfos[3].tachPin, fan_four_pulse, FALLING);
+  // Not clear if pin 9 is int source + disconnected as it causes the 
+  // arduino to lockup when pulsed by the tach.
+  //attachInterrupt(fanInfos[3].tachPin, fan_four_pulse, FALLING);
   attachInterrupt(fanInfos[4].tachPin, fan_five_pulse, FALLING);
 }
 
@@ -68,8 +72,6 @@ void updateFanPulseCounts() {
   // Start by storing the pulses read from the fan tach interrupts.
   // into the fanInfo struct and resetting the pulse info.
   for (int fanId = 0; fanId < 4; fanId++) {
-    //Serial.print("Fan: ");
-    //Serial.print(fanId);
     
     fanInfos[fanId].pulseCount = fan_pulse_count[fanId];
     fan_pulse_count[fanId] = 0;
@@ -77,11 +79,8 @@ void updateFanPulseCounts() {
     if (fanInfos[fanId].pulseCount > 0) {
       // Ensure the array version is updated, not the local copy.
       fanInfos[fanId].computedRpm = computeFanSpeedRpm(fanId, timeSinceLastCompute);
-      //Serial.print(", RPM: ");
-      //Serial.println(fanInfos[fanId].computedRpm);
     } else {
       fanInfos[fanId].computedRpm = 0;
-      //Serial.println(" no pulses.");
     }
   }
 
@@ -116,6 +115,8 @@ void setFan(int fanId) {
     
   analogWrite(fanInfo.pwmPin, pwm_frequency);
 
+  Serial.println("fan speed set.");
+
   // Don't use fanInfo. as it's a copy and 
   // the fanInfos array isn't updated.
   fanInfos[fanId].currentPwm = pwm_frequency;
@@ -125,16 +126,14 @@ void setFan(int fanId) {
 // Switch the power on/off for the fans.
 // PWM fans tend to run even at 0 value
 // so master power here shuts down the 12v rail
-void setPower(bool state) {
+void setPower(bool state) { 
   digitalWrite(master_power_pin, state);
   master_power = state;
 
   if (master_power) {
-    Serial.println("Power ON");
-    publishTinamousStatus("Fan Power ON");
+    Serial.println("Fan Power ON");
   } else {
-    Serial.println("Power OFF");
-    publishTinamousStatus("Fan Power Off");
+    Serial.println("Fan Power OFF");
   }
 }
 
@@ -157,17 +156,21 @@ bool isFanOn(int fanId) {
 // Set the speed of the fans
 void setFansSpeed(int speed) {
   String message;
-  message = "Setting fan speed to ";
+  message = "Setting fans to speed ";
   message = message + speed;
   
   publishTinamousStatus(message);
   
   for (int i=0; i<4; i++) {
-    fanInfos[i].speedSet = speed;
-    
-    if (fanInfos[i].speedSet > 11) {
-      fanInfos[i].speedSet = 11;
-    }
+    setFansSpeed(i, speed);
+  }
+}
+
+void setFansSpeed(int fanId, int speed) {
+  fanInfos[fanId].speedSet = speed;
+  
+  if (fanInfos[fanId].speedSet > 11) {
+    fanInfos[fanId].speedSet = 11;
   }
 }
 

@@ -13,8 +13,6 @@
 // Fans 1,2,3, 4 and 5 , indexed as 0..4
 fanInfo_t fanInfos[5];
 
-int dust_sensor_pin = 6;
-
 // Not used in the fan box.
 //int switch_pins[] = {A1, A2};
 //int switch_leds[] = {A3, A3};
@@ -49,10 +47,6 @@ DisplayMode fanDisplayModes[] = {
   DisplayMode::AirQuality, 
   DisplayMode::WiFiStrength};
 
-// User selected speed to set the fans to.
-//int pwmSpeed = 255;
-//int fanMode = 3; // Fan mode. 0=Off, 1=Low, 2=Medium, 3=High, 4 = auto??
-
 // running LED Index, by "Hour" (0 top, 11 at 11 o'clock...)
 int redHourIndex = 0;
 int lastRedHourIndex = 0;
@@ -69,20 +63,13 @@ int ledBrightness = 32;
 #define NUM_LEDS 64
 // ech fan has 16ish...
 CRGB leds[NUM_LEDS];
+
 // If the LEDs are enabled (false = LEDs off - dark)
 bool ledsEnabled = true;
 
 // --------------------------------
-// Sensors
+// Sensor values (used across the application).
 // --------------------------------
-// When the sensors should next be read
-unsigned long nextSensorRead = 0;
-
-// What sensors are attached.
-bool hasBme280 = false;
-bool hasBme680 = false;
-bool hasCCS811 = false;
-
 // BME 280 (or 680)
 // Guess at appropriate values whilst not available to be read.
 float humidity = 50;
@@ -91,7 +78,7 @@ float pressure = 1015.2;
 
 // TODO: 680 toc/air quality
 
-// CCS811
+// CCS811 values.
 long ccs811DataUsableAfter;
 unsigned int ccsBaseline;
 unsigned int tVOC = 0;
@@ -101,6 +88,8 @@ int light = 34;
 
 // measured rssi.
 int rssi;
+
+float voltage = 0.0;
 
 // =============================================
 
@@ -157,6 +146,8 @@ void setup() {
   airQualityRange = setupAirQualityDisplayRange();
   wifiDisplayRange = setupWiFiDisplayRange();
 
+  setupSensors();
+
   setupWiFi();
   showSetupStageComplete(3);
 
@@ -170,7 +161,7 @@ void setup() {
   setupMqtt();
   showSetupStageComplete(4);
   
-  Serial.println("Boff version 0.1.1");
+  Serial.println("Boff version 0.2.1");
   Serial.println("------------------------------------------");
 }
 
@@ -182,8 +173,6 @@ void serialConnectDelay() {
     delay(1000);
   }
 }
-
-
 
 void printCurrentDateTime() {
   // Print date...
@@ -215,7 +204,7 @@ void print2digits(int number) {
 // Loop functions
 // ==============================================================
 
-
+// Profiling variables.
 unsigned long loop_start;
 unsigned long loop_took;
 
@@ -224,15 +213,7 @@ void loop() {
   digitalWrite(LED_BUILTIN, HIGH); // D6 used for input for dust sensor when fitted.
   delay(100);
 
-  if (nextSensorRead < millis()) {
-    //Serial.println("Read sensors...");
-    // meausre other sensors...
-    measureRssi();
-
-    // refresh every n seconds
-    nextSensorRead = millis() + 10 * 1000;
-  }
-
+  sensorsLoop();
   fansLoop();
   readInput();
   handleNeopixels();
@@ -283,6 +264,8 @@ void printInfo() {
   Serial.print("\t");  
   Serial.print(rssi);
   Serial.print("\t");
+  Serial.print(voltage);
+  Serial.print("\t");
   // Assume all fans have the same set speed.
   Serial.print(fanInfos[0].speedSet);
   Serial.print("\t[");
@@ -295,6 +278,8 @@ void printInfo() {
     Serial.print(fanDisplayModes[fanId]);
     Serial.print("\t");
   }
+  Serial.print("]\t");
+  Serial.print(ledBrightness);
   Serial.print("\t");
   Serial.println();
 
@@ -320,6 +305,8 @@ void printHeader() {
   Serial.print("\t");
   Serial.print("RSSI: ");
   Serial.print("\t");
+  Serial.print("V in:");
+  Serial.print("\t");
   Serial.print("Speed: ");
   Serial.print("\t");
   Serial.print("RPMs: ");
@@ -327,6 +314,7 @@ void printHeader() {
   Serial.print("\t");
   Serial.print("Display Mode: ");
   Serial.print("\t\t\t\t");
+  Serial.print("Brightness: ");
   Serial.print("\t");
   Serial.println();
 
@@ -404,13 +392,13 @@ void readInput() {
         setPower(false);       
         break;
       case '>':
-        ledBrightness+= 10;
+        ledBrightness+= 5;
         if (ledBrightness > 255){
           ledBrightness = 255;
         }
         break;
       case '<':
-        ledBrightness-= 10;
+        ledBrightness-= 5;
         if (ledBrightness <= 0){
           ledBrightness = 0;
         }

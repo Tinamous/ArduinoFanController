@@ -152,6 +152,11 @@ void sendMeasurements() {
     senml = senml + "'v':";
     senml = senml + rssi;
     senml = senml + "},";
+    // Fan Voltage (0 for not powered, or 1/5th of actual).
+    senml = senml + "{'n':'fanv',";
+    senml = senml + "'v':";
+    senml = senml + voltage;
+    senml = senml + "},";
     // Speed selected
     senml = senml + "{'n':'setSpeed',";
     senml = senml + "'v':";
@@ -213,7 +218,7 @@ void publishTinamousStatus(String message) {
   if (!mqttClient.connected()) {
     Serial.print("Not connected after publishing status. What happened?");
   } else {
-    Serial.print("Message sent.");
+    Serial.print("Status message sent.");
   }
 }
 
@@ -248,7 +253,7 @@ void messageReceived(String &topic, String &payload) {
     }
   } 
 
-  if (checkCustomMqttFeeds(topic, payload) {
+  if (checkCustomMqttFeeds(topic, payload)) {
     return;
   }
 
@@ -276,14 +281,21 @@ int value = payload.toInt();
   mqttFeedsValue[index] = payload.toInt();
 }
 
-
-
 // =================================================
 // Status message handling
 // =================================================
 
 bool handleStatusMessage(String payload) {
   if (payload.indexOf("fans on")> 0) {
+    Serial.println("Turn on the fans!");
+    //publishTinamousStatus("Will you switch the fans on please.");
+    setPower(1);
+    setFansSpeed(11);
+    publishTinamousStatus("Fans on.");
+    return true;
+  }
+
+  if (payload.indexOf("turn on the fans")> 0) {
     Serial.println("Turn on the fans!");
     publishTinamousStatus("Will you switch the fans on please.");
     setPower(1);
@@ -292,6 +304,14 @@ bool handleStatusMessage(String payload) {
   }
 
   if (payload.indexOf("fans off")> 0) {
+    Serial.println("Turn off the fans!");
+    publishTinamousStatus("fans go off please.");
+    setPower(0);
+    setFansSpeed(0);
+    return true;
+  }
+
+  if (payload.indexOf("turn off the fans")> 0) {
     Serial.println("Turn off the fans!");
     publishTinamousStatus("fans go off please.");
     setPower(0);
@@ -315,26 +335,39 @@ bool handleStatusMessage(String payload) {
   } 
 
   if (payload.indexOf("lights on")> 0) {
-    ledsEnabled =  true;
+    ledsEnabled = true;
     return true;
   } 
 
-  if (payload.indexOf("bright")> 0) {
+  if (payload.indexOf("lights full")> 0) {
     ledsEnabled =  true;
-    ledBrightness =  80;
+    ledBrightness = 255;
     return true;
   } 
 
-  if (payload.indexOf("dim")> 0) {
+  if (payload.indexOf("lights bright")> 0) {
+    ledsEnabled =  true;
+    ledBrightness = 80;
+    return true;
+  } 
+
+  if (payload.indexOf("lights normal")> 0) {
+    ledsEnabled =  true;
+    ledBrightness =  30;
+    return true;
+  } 
+
+  if (payload.indexOf("lights dim")> 0) {
     ledsEnabled =  true;
     ledBrightness =  10;
     return true;
   } 
 
+  char buffer[25];
   if (payload.indexOf("fans speed")> 0) {
     String setspeed = "";
     setspeed.reserve(25);
-    char buffer[25];
+    //char buffer[25];
     
     for (int fanSpeed= 11; fanSpeed>=0; fanSpeed--) {
       sprintf(buffer, "fans speed %01d",fanSpeed);
@@ -351,13 +384,24 @@ bool handleStatusMessage(String payload) {
       }
     }
   }
+
+  // Debug Helpers..
+  for (int fanId= 0; fanId<4; fanId++) {
+    sprintf(buffer, "fan %01d on", fanId);
+    if (payload.indexOf(buffer)> 0) {
+      Serial.println("Turning on a fan!");
+      setPower(1);
+      setFansSpeed(fanId, 11);
+      return true;
+    }
+  }
   
   if (payload.indexOf("help")> 0) {
     Serial.println("Sending help...");
     publishTinamousStatus(
-    "Send a message to me (@" DEVICE_USERNAME ") then: \n* 'Fans On' to turn the fans on," 
+    "Send a message to me (@" DEVICE_USERNAME ") then: \n* "
+    "'Fans On' to turn the fans on," 
     " or \n* 'Fans Off' to turn the fans off,"
-    " or \n* 'Fans On' to turn the fans on,"    
     " or \n* 'Fans Speed 6' to set the speed to 6 (max 11),"
     " or \n* 'sleep'  to turn off the lights and fans,"
     " or \n* 'wake'  to turn on the lights and fans"
