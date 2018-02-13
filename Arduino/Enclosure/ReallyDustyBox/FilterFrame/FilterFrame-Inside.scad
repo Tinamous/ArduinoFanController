@@ -1,10 +1,19 @@
-width = 190; // Ultimaker can't quite fo 200x200.
+width = 190; // Ultimaker can't quite do 200x200.
 height = 200;
 $fn=180;
+
+// 4 Inner holes -> Screw for fan (screw head inside the filter
+
+// 4 Corner holes -> Connection through to outer filter. Fit with M4 Heatfit inserts
+
+// 2 Middle holes (vertical @ width/2 ) M4 Heat fit to hold the filter in place when the outer filter (corner screw) is removed.
+
+// 2 Middle holes (horizontal @ height /2)  - Don't remember (maybe for retainer or just better securing out outer.
 
 
 // Construction:
 // ||||||||||||||||||||||||
+// Fan
 // Inside Filter Frame
 // Filter
 // Case Wall
@@ -13,16 +22,19 @@ $fn=180;
 // Outside Filter Frame
 // ||||||||||||||||||||||||
 
-// Inside Filter Frame: Depth = 25mm, isInsideFrame = true
-// Inside Filter Retainer: Depth = 2mm, isInsideFrame = true
-// Outside Filter Frame: Depth = 20mm, isInsideFrame = false
-
-// 3mm for frame thickness, 20mm to hold the 25mm deep filter.
-depth = 10;
-
-// Inside mouting frame has extra holes
-// to hold it in place when the outside filter
-// is removed for cleaning.
+// Options:
+// Dusty Box (DIY)
+//   Intake through side fans
+//   Carbon filter inside
+//   Deep filter outside (primary)
+//   Inner Depth = 8mm
+// 
+// Fume Box (Maker)
+//   Outtake through side fans (solder fume / makers box)
+//   Deep inside filters (primary/dust)
+//   Carbon filters outside.
+//   Inner Depth = 18mm
+depth = 8;
 
 // true for inside frame, false for outside frame.
 isInsideFrame = true;
@@ -144,8 +156,8 @@ module mountingHoles() {
     mountingHole(width-6,height-6);
     mountingHole(6,height-6);
     
-    mountingHole(6,height/2);
-    mountingHole(width-6,height/2);
+    #mountingHole(6,height/2);
+    #mountingHole(width-6,height/2);
     
     if (isInsideFrame) {
         ReverseMountinghole(width/2,8);
@@ -162,7 +174,7 @@ module mountingHole(x,y) {
         cylinder(d=5.2, h=depth+2);
         
         // Countersink...
-        cylinder(d1=8.5, d2=5, h=3);
+        //cylinder(d1=8.5, d2=5, h=3);
     }
 }
 

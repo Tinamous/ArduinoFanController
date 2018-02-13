@@ -1,10 +1,11 @@
-width = 190; // Ultimaker can't quite fo 200x200.
+width = 190; // Ultimaker can't quite do 200x200.
 height = 200;
 $fn=180;
 
 
 // Construction:
 // ||||||||||||||||||||||||
+// Fan
 // Inside Filter Frame
 // Filter
 // Case Wall
@@ -14,7 +15,7 @@ $fn=180;
 // ||||||||||||||||||||||||
 
 // Inside Filter Frame: Depth = 25mm, isInsideFrame = true
-// Inside Filter Retainer: Depth = 2mm, isInsideFrame = true
+// Inside Filter Retainer: Depth = 3mm, isInsideFrame = true
 // Outside Filter Frame: Depth = 20mm, isInsideFrame = false
 
 // 3mm for frame thickness (allow depth of M3 counter sink screw.
@@ -25,7 +26,7 @@ depth = 3;
 // is removed for cleaning.
 
 // true for inside frame, false for outside frame.
-isInsideFrame = false;
+isInsideFrame = true;
 
 holesDown = 3;
 holesAcross = 3;

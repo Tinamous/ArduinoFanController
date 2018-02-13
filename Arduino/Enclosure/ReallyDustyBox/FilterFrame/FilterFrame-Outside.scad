@@ -1,10 +1,11 @@
-width = 190; // Ultimaker can't quite fo 200x200.
+width = 190; // Ultimaker can't quite do 200x200.
 height = 200;
 $fn=180;
 
 
 // Construction:
 // ||||||||||||||||||||||||
+// Fan
 // Inside Filter Frame
 // Filter
 // Case Wall
@@ -13,19 +14,28 @@ $fn=180;
 // Outside Filter Frame
 // ||||||||||||||||||||||||
 
-// Inside Filter Frame: Depth = 25mm, isInsideFrame = true
-// Inside Filter Retainer: Depth = 2mm, isInsideFrame = true
-// Outside Filter Frame: Depth = 20mm, isInsideFrame = false
 
-// 3mm for frame thickness, 20mm to hold the 25mm deep filter.
-depth = 18;
+// Options:
+// Dusty Box (DIY)
+//   Intake through side fans
+//   Carbon filter inside
+//   Deep filter outside (primary)
+//   Outer Depth = 18mm
+// 
+// Fume Box (Maker)
+//   Outtake through side fans (solder fume / makers box)
+//   Deep inside filters (primary/dust)
+//   Carbon filters outside.
+//   Outer Depth = 8mm
+
+depth = 8;
 
 // Inside mouting frame has extra holes
 // to hold it in place when the outside filter
 // is removed for cleaning.
 
 // true for inside frame, false for outside frame.
-isInsideFrame = true;
+isInsideFrame = false;
 
 holesDown = 6;
 holesAcross = 6;
