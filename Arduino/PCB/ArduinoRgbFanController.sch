@@ -4232,6 +4232,28 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <text x="-2.27" y="-1.27" size="1.27" layer="25" rot="R90">&gt;NAME</text>
 <text x="3.24" y="-1.37" size="1.27" layer="27" rot="R90">&gt;VALUE</text>
 </package>
+<package name="CPOL-RADIAL-1000UF-25V">
+<wire x1="-1.905" y1="1.27" x2="-3.175" y2="1.27" width="0.2032" layer="21"/>
+<circle x="0" y="0" radius="5.461" width="0.2032" layer="21"/>
+<pad name="-" x="-2.54" y="0" drill="0.9" diameter="1.9304"/>
+<pad name="+" x="2.54" y="0" drill="0.9" diameter="1.9304" shape="square"/>
+<text x="-1.905" y="-4.318" size="0.8128" layer="27">&gt;Value</text>
+<text x="-0.762" y="2.921" size="0.4064" layer="25">&gt;Name</text>
+</package>
+<package name="CPOL-RADIAL-1000UF-25V-KIT">
+<wire x1="-1.905" y1="1.27" x2="-3.175" y2="1.27" width="0.2032" layer="21"/>
+<circle x="0" y="0" radius="5.461" width="0.2032" layer="21"/>
+<pad name="-" x="-2.5" y="0" drill="0.9" diameter="1.9304" stop="no"/>
+<pad name="+" x="2.5" y="0" drill="0.9" diameter="1.9304" shape="square" stop="no"/>
+<text x="-2.005" y="-4.018" size="0.8128" layer="27">&gt;Value</text>
+<text x="-0.762" y="2.921" size="0.4064" layer="25">&gt;Name</text>
+<circle x="-2.5" y="0" radius="0.447040625" width="0" layer="29"/>
+<circle x="2.5" y="0" radius="0.45" width="0" layer="29"/>
+<rectangle x1="1.5" y1="-1" x2="3.5" y2="1" layer="30"/>
+<circle x="-2.5" y="0" radius="0.9779" width="0" layer="30"/>
+<wire x1="2.978" y1="1.497" x2="1.962" y2="1.497" width="0.2032" layer="21"/>
+<wire x1="2.47" y1="2.005" x2="2.47" y2="0.989" width="0.2032" layer="21"/>
+</package>
 </packages>
 <symbols>
 <symbol name="CAP">
@@ -4292,6 +4314,38 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <technology name="">
 <attribute name="PROD_ID" value="CAP-08310"/>
 <attribute name="VALUE" value="47uF" constant="no"/>
+</technology>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="1000UF-25V(PTH)" prefix="C" uservalue="yes">
+<description>CAP-08070</description>
+<gates>
+<gate name="G$1" symbol="CAP_POL" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="CPOL-RADIAL-1000UF-25V">
+<connects>
+<connect gate="G$1" pin="+" pad="+"/>
+<connect gate="G$1" pin="-" pad="-"/>
+</connects>
+<technologies>
+<technology name="">
+<attribute name="PROD_ID" value="CAP-09538" constant="no"/>
+<attribute name="VALUE" value="CAP-09538" constant="no"/>
+</technology>
+</technologies>
+</device>
+<device name="KIT" package="CPOL-RADIAL-1000UF-25V-KIT">
+<connects>
+<connect gate="G$1" pin="+" pad="+"/>
+<connect gate="G$1" pin="-" pad="-"/>
+</connects>
+<technologies>
+<technology name="">
+<attribute name="PROD_ID" value="CAP-09538" constant="no"/>
+<attribute name="VALUE" value="1000uf/25V" constant="no"/>
 </technology>
 </technologies>
 </device>
@@ -12126,17 +12180,29 @@ B340A  3A 40V SMA &lt;br&gt;</description>
 <part name="JP9" library="SparkFun-Connectors" deviceset="M04" device="POLAR" value="Fan3"/>
 <part name="JP13" library="SparkFun-Connectors" deviceset="M04" device="POLAR" value="Fan4"/>
 <part name="GND5" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="JP15" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED1"/>
-<part name="JP25" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED2"/>
-<part name="JP31" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED3"/>
-<part name="JP34" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED4"/>
+<part name="JP15" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED1">
+<attribute name="FARNELL" value="2063775"/>
+</part>
+<part name="JP25" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED2">
+<attribute name="FARNELL" value="2063775"/>
+</part>
+<part name="JP31" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED3">
+<attribute name="FARNELL" value="2063775"/>
+</part>
+<part name="JP34" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED4">
+<attribute name="FARNELL" value="2063775"/>
+</part>
 <part name="GND17" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND18" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND19" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND20" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="JP35" library="SparkFun-Connectors" deviceset="M03" device="POLAR" value="Fan5"/>
-<part name="JP36" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED5"/>
-<part name="JP37" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED6"/>
+<part name="JP36" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED5">
+<attribute name="FARNELL" value="2063775"/>
+</part>
+<part name="JP37" library="SparkFun-Connectors" deviceset="M04" device="PTH" value="LED6">
+<attribute name="FARNELL" value="2063775"/>
+</part>
 <part name="GND21" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND22" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="Q1" library="SparkFun-DiscreteSemi" deviceset="MOSFET-PCHANNEL" device="" value="IRLML930">
@@ -12158,9 +12224,11 @@ B340A  3A 40V SMA &lt;br&gt;</description>
 <part name="GND28" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="SUPPLY10" library="SparkFun-Aesthetics" deviceset="VIN" device=""/>
 <part name="R11" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="470R"/>
-<part name="C4" library="SparkFun-Capacitors" deviceset="47UF-10V-10%(TANT)" device="" value="47uF"/>
-<part name="C5" library="SparkFun-Capacitors" deviceset="47UF-10V-10%(TANT)" device="" value="47uF">
-<attribute name="FARNELL" value="1135048"/>
+<part name="C4" library="SparkFun-Capacitors" deviceset="47UF-10V-10%(TANT)" device="" value="220uF">
+<attribute name="FARNELL" value="2491486"/>
+</part>
+<part name="C5" library="SparkFun-Capacitors" deviceset="47UF-10V-10%(TANT)" device="" value="220uF">
+<attribute name="FARNELL" value="2491486"/>
 </part>
 <part name="GND10" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND13" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
@@ -12209,6 +12277,7 @@ B340A  3A 40V SMA &lt;br&gt;</description>
 <part name="R2" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="43k"/>
 <part name="R3" library="SparkFun-Resistors" deviceset="RESISTOR" device="0805-RES" value="10k"/>
 <part name="GND7" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
+<part name="C8" library="SparkFun-Capacitors" deviceset="1000UF-25V(PTH)" device="KIT" value="2200uf/16V"/>
 </parts>
 <sheets>
 <sheet>
@@ -12285,6 +12354,7 @@ LED supply option</text>
 * Forward mount vertical USB socket for phone charge?
 * Can Fans 1 &amp; 2, 3 &amp; 4 share pwm signals?</text>
 <text x="33.02" y="48.26" size="1.778" layer="97">C5: Ideally 1000uF @ 6.3V, Farnell 1135048 100uF Tant</text>
+<text x="76.2" y="198.12" size="1.778" layer="97">external</text>
 </plain>
 <instances>
 <instance part="FRAME1" gate="G$1" x="0" y="0"/>
@@ -12350,17 +12420,29 @@ LED supply option</text>
 <instance part="JP9" gate="G$1" x="195.58" y="76.2"/>
 <instance part="JP13" gate="G$1" x="223.52" y="76.2"/>
 <instance part="GND5" gate="1" x="147.32" y="68.58"/>
-<instance part="JP15" gate="G$1" x="10.16" y="22.86"/>
-<instance part="JP25" gate="G$1" x="38.1" y="22.86"/>
-<instance part="JP31" gate="G$1" x="68.58" y="22.86"/>
-<instance part="JP34" gate="G$1" x="86.36" y="22.86"/>
+<instance part="JP15" gate="G$1" x="10.16" y="22.86">
+<attribute name="FARNELL" x="10.16" y="22.86" size="1.778" layer="96" display="off"/>
+</instance>
+<instance part="JP25" gate="G$1" x="38.1" y="22.86">
+<attribute name="FARNELL" x="38.1" y="22.86" size="1.778" layer="96" display="off"/>
+</instance>
+<instance part="JP31" gate="G$1" x="68.58" y="22.86">
+<attribute name="FARNELL" x="68.58" y="22.86" size="1.778" layer="96" display="off"/>
+</instance>
+<instance part="JP34" gate="G$1" x="86.36" y="22.86">
+<attribute name="FARNELL" x="86.36" y="22.86" size="1.778" layer="96" display="off"/>
+</instance>
 <instance part="GND17" gate="1" x="17.78" y="12.7"/>
 <instance part="GND18" gate="1" x="45.72" y="15.24"/>
 <instance part="GND19" gate="1" x="76.2" y="15.24"/>
 <instance part="GND20" gate="1" x="93.98" y="15.24"/>
 <instance part="JP35" gate="G$1" x="10.16" y="88.9"/>
-<instance part="JP36" gate="G$1" x="104.14" y="22.86"/>
-<instance part="JP37" gate="G$1" x="121.92" y="22.86"/>
+<instance part="JP36" gate="G$1" x="104.14" y="22.86">
+<attribute name="FARNELL" x="104.14" y="22.86" size="1.778" layer="96" display="off"/>
+</instance>
+<instance part="JP37" gate="G$1" x="121.92" y="22.86">
+<attribute name="FARNELL" x="121.92" y="22.86" size="1.778" layer="96" display="off"/>
+</instance>
 <instance part="GND21" gate="1" x="111.76" y="15.24"/>
 <instance part="GND22" gate="1" x="129.54" y="15.24"/>
 <instance part="Q1" gate="G$1" x="40.64" y="96.52" smashed="yes" rot="R180">
@@ -12392,7 +12474,9 @@ LED supply option</text>
 <instance part="R11" gate="G$1" x="177.8" y="167.64" smashed="yes">
 <attribute name="VALUE" x="173.99" y="164.338" size="1.778" layer="96"/>
 </instance>
-<instance part="C4" gate="G$1" x="53.34" y="17.78"/>
+<instance part="C4" gate="G$1" x="53.34" y="17.78">
+<attribute name="FARNELL" x="53.34" y="17.78" size="1.778" layer="96" display="off"/>
+</instance>
 <instance part="C5" gate="G$1" x="25.4" y="40.64" smashed="yes" rot="R90">
 <attribute name="NAME" x="24.638" y="44.323" size="1.778" layer="95"/>
 <attribute name="VALUE" x="28.956" y="37.211" size="1.778" layer="96" rot="R180"/>
@@ -12474,6 +12558,7 @@ LED supply option</text>
 <attribute name="VALUE" x="88.138" y="74.93" size="1.778" layer="96" rot="R270"/>
 </instance>
 <instance part="GND7" gate="1" x="91.44" y="60.96"/>
+<instance part="C8" gate="G$1" x="76.2" y="205.74"/>
 </instances>
 <busses>
 </busses>
