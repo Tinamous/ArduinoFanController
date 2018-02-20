@@ -1,3 +1,9 @@
+#include <Adafruit_TCS34725.h>
+#include <Adafruit_BME680.h>
+#include <bme680.h>
+#include <bme680_defs.h>
+#include <SparkFunCCS811.h>
+
 #include <MQTTClient.h>
 #include <system.h>
 #include <WiFi101.h>
@@ -13,11 +19,9 @@
 // Fans 1,2,3, 4 and 5 , indexed as 0..4
 fanInfo_t fanInfos[5];
 
-// Not used in the fan box.
-//int switch_pins[] = {A1, A2};
-//int switch_leds[] = {A3, A3};
-// Only on prototype PCB. Needs to be pulled to GND
-//int switch_enable = A5;
+// Not used in the fan box. 
+int switch_pins[] = {A1, A2};
+int switch_leds[] = {A3, A4};
 
 // 0: Ignore - manual
 // 1: Temperature 
@@ -38,6 +42,7 @@ fanInfo_t fanInfos[5];
 // 17: WiFiStrength
 // 18: OnOff
 // 19: MqttFeed
+// 100: Fancy
 // 255: Automatic
 // TODO: Load this from EEPROM or something.
 // Let it be settable via MQTT/Alexa/////
@@ -45,46 +50,64 @@ DisplayMode fanDisplayModes[] = {
   DisplayMode::Temperature, 
   DisplayMode::Humidity, 
   DisplayMode::AirQuality, 
-  DisplayMode::WiFiStrength};
+  DisplayMode::Clock};
 
 // running LED Index, by "Hour" (0 top, 11 at 11 o'clock...)
 int redHourIndex = 0;
 int lastRedHourIndex = 0;
-CRGB ledsSetColor = CRGB::Red;
+CRGB ledsSetColor;
 
 // How bright to make the LEDs.
-int ledBrightness = 32;
+int ledBrightnessPercent = 20;
 
 //#define NUM_LEDS 24
 // 4 Fans, 16 LEDs per fan = 64
 // 2 1M strips of LEDs, 120 LEDS per M = 240
 // 2 1M strips of LEDs, 90 LEDS per M = 180
 // 64 + 240 = 304
+// 64 (Fans) + 120 + 60-18 (42) (1 stip + 18 LEDs short of 1/2 srtip).
+// = 64 + 162 = 226
+// + about 74 from the top pointing set
+//#define NUM_LEDS 226 + 74
+// each fan has 16ish...
+// Wooden fan...
 #define NUM_LEDS 64
-// ech fan has 16ish...
 CRGB leds[NUM_LEDS];
 
-// If the LEDs are enabled (false = LEDs off - dark)
-bool ledsEnabled = true;
+// ------------------------------------
+// Sensor values (defined here so they 
+// can be used across the application).
+// -------------------------------------
+// What sensors are attached.
+bool hasBme280 = false;
+bool hasBme680 = false;
+bool hasCCS811 = false;
+bool hasLightSensor = false;
 
-// --------------------------------
-// Sensor values (used across the application).
-// --------------------------------
 // BME 280 (or 680)
 // Guess at appropriate values whilst not available to be read.
 float humidity = 50;
 float temperature = 22;
 float pressure = 1015.2;
+int sensorSource = 0; // 0: Fake, 1: 280, 2: 680
 
-// TODO: 680 toc/air quality
+// BME680 specific. toc/air quality 
+float gas_resistance;
 
 // CCS811 values.
 long ccs811DataUsableAfter;
 unsigned int ccsBaseline;
 unsigned int tVOC = 0;
 unsigned int eCO2 = 400;
+uint8_t ccsLastStatusError;
 
-int light = 34;
+// Light sensor
+uint16_t lightLevelLux = 20;
+uint16_t redLightLevel = 0;
+uint16_t greenLightLevel = 0;
+uint16_t blueLightLevel = 0;
+uint16_t clearLightLevel = 0;
+uint16_t colorTemperature = 0;
 
 // measured rssi.
 int rssi;
@@ -116,6 +139,14 @@ displayRange_t airQualityRange;
 displayRange_t dustRange;
 displayRange_t wifiDisplayRange;
 
+// =============================================
+// Switches
+// =============================================
+// Switch debounce handling.
+volatile bool handle_switch1_pressed = false;
+volatile bool handle_switch2_pressed = false;
+
+
 // LED 1 Nose Green: Fans and Neopixel setup done.
 // LED 2 Nose Green: Serial port wait done.
 // LED 3 Nose Green: WiFi done.
@@ -123,12 +154,13 @@ displayRange_t wifiDisplayRange;
 // the setup function runs once when you press reset or power the board
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
-  
-  // Small (diagnostic) reboot delay
-  delay(1000);
 
   setupFans();
   setupNeopixels();
+  // Artificial delay so that the first nose
+  // isn't instandly green
+  delay(5000);
+  
   showSetupStageComplete(1);
   delay(1000);
    
@@ -153,20 +185,25 @@ void setup() {
 
   // TODO: Get time from NTP server
   rtc.begin();
-  //rtc.setTime(04, 40, 20);
-  //rtc.setDate(21, 01, 2018);
+  rtc.setTime(04, 40, 20);
+  rtc.setDate(20, 02, 2018);
   printCurrentDateTime();
   delay(2000);
 
   setupMqtt();
   showSetupStageComplete(4);
+
+  setupSwitches();
   
-  Serial.println("Boff version 0.2.1");
+  Serial.println("Boff version 0.2.3");
   Serial.println("------------------------------------------");
+
+  // Switch the Switch LED on to indicate we're ready...
+  setSwitchLEDs(HIGH);
 }
 
 void serialConnectDelay() {
-  for (int i = 0; i<10; i++) {
+  for (int i = 0; i<5; i++) {
     Serial.print("Serial wait ");
     Serial.print(i+1);
     Serial.println("......");
@@ -200,6 +237,18 @@ void print2digits(int number) {
   Serial.print(number);
 }
 
+void setupSwitches() {
+  
+  for (int i=0; i<2; i++) {
+      pinMode(switch_leds[i], OUTPUT);
+      digitalWrite(switch_leds[i], LOW);
+      pinMode(switch_pins[i], INPUT_PULLUP);
+  }
+
+  attachInterrupt(switch_pins[0], switch1_pressed, FALLING); 
+  attachInterrupt(switch_pins[1], switch2_pressed, FALLING); 
+}
+
 // ==============================================================
 // Loop functions
 // ==============================================================
@@ -211,19 +260,25 @@ unsigned long loop_took;
 void loop() {
   loop_start = millis();
   digitalWrite(LED_BUILTIN, HIGH); // D6 used for input for dust sensor when fitted.
-  delay(100);
 
   sensorsLoop();
   fansLoop();
   readInput();
-  handleNeopixels();
-
+  ledsLoop();
+  handleSwitches();
   mqttLoop();
+  
   printHeader();
   printInfo();
 
   digitalWrite(LED_BUILTIN, LOW);    
-  delay(100);
+  // Minimum delay, otherwise WiFi/MQTT processing
+  // doesn't happen and we keep disconnecting.
+  delay(20);
+
+  fanSpeedDelay();
+
+  
 
   loop_took = millis() - loop_start;
   //Serial.print("Loop took: ");
@@ -231,16 +286,6 @@ void loop() {
   //Serial.println("ms");
 }
 
-// Loop handler to update the Neopixels (i.e. LED leds + possible others)
-// code for this is in the displayLeds file.
-void handleNeopixels() {
-  updateFansLeds();
-  updateStrip1Leds();
-  updateStrip2Leds();
-  endLedUpdate();
-
-  FastLED.show(); 
-}
 
 unsigned long lastPrintInfo = 0;
 unsigned long lastHeaderPrinted = 0;
@@ -260,7 +305,9 @@ void printInfo() {
   Serial.print("\t");
   Serial.print(tVOC);
   Serial.print("\t");
-  Serial.print(light);
+  Serial.print(gas_resistance);
+  Serial.print("\t");
+  Serial.print(lightLevelLux);
   Serial.print("\t");  
   Serial.print(rssi);
   Serial.print("\t");
@@ -279,7 +326,7 @@ void printInfo() {
     Serial.print("\t");
   }
   Serial.print("]\t");
-  Serial.print(ledBrightness);
+  Serial.print(ledBrightnessPercent);
   Serial.print("\t");
   Serial.println();
 
@@ -301,6 +348,8 @@ void printHeader() {
   Serial.print("\t");
   Serial.print("TVOC: ");
   Serial.print("\t");
+  Serial.print("Gas R'");
+  Serial.print("\t");
   Serial.print("Light: ");
   Serial.print("\t");
   Serial.print("RSSI: ");
@@ -321,11 +370,95 @@ void printHeader() {
   lastHeaderPrinted = millis();
 }
 
-int selectedFanId = 1;
-  
+// ==============================================================
+// Switches (Optional)
+// ==============================================================
+void handleSwitches() {
+  // Interrupt from switch 1...
+  if (handle_switch1_pressed) {
+
+    Serial.println("Switch 1 Interrupt handling");
+
+    // Ensure we have atleast 200ms delay before checking if the switch is still pressed.
+    delay(200);
+
+    // If the switch is now high, ignore it, probably a bounde.
+    if (digitalRead(switch_pins[0])) {
+      handle_switch1_pressed = false;
+      return;
+    }
+    setSwitchLEDs(LOW);
+
+    if (isMasterPowerEnabled()) {
+      publishTinamousStatus("Switch pressed, switching off the fans");
+    } else {
+      publishTinamousStatus("Switch pressed, switching on the fans");
+    }
+
+    // Power the fans on gently
+    setFansSpeed(10);
+    setPower(!isMasterPowerEnabled());
+    delay(2000);
+    
+    // Set all the fans to 100%
+    setFansSpeed(100);
+    
+    // Erm....
+    if (isMasterPowerEnabled()) {
+      leds[0] = CRGB::Red; 
+      leds[1] = CRGB::Red; 
+      leds[2] = CRGB::Red; 
+      leds[3] = CRGB::Red; 
+    } else {
+      leds[0] = CRGB::Green; 
+      leds[1] = CRGB::Green; 
+      leds[2] = CRGB::Green; 
+      leds[3] = CRGB::Green; 
+    }
+
+    // wait for Switch1 and two to go high again.
+    // to ensure the user has released it 
+    while(!digitalRead(switch_pins[0])) { }
+    
+    handle_switch1_pressed = false;
+    setSwitchLEDs(HIGH);
+  }
+
+  if (handle_switch2_pressed) {
+
+    Serial.println("Switch 2 Interrupt handling");
+
+    // Ensure we have atleast 200ms delay before checking if the switch is still pressed.
+    delay(200);
+
+    // If the switch is now high, ignore it, probably a bounde.
+    if (digitalRead(switch_pins[1])) {
+      handle_switch1_pressed = false;
+      return ;
+    }
+
+    setSwitchLEDs(LOW);
+
+    // Do switch 2 stuff here....
+    
+    while(!digitalRead(switch_pins[1])) { }
+    handle_switch2_pressed = false;
+    setSwitchLEDs(HIGH);
+  }
+}
+
+void setSwitchLEDs(bool state) {
+  for (int i=0; i<2; i++) {
+      digitalWrite(switch_leds[i], state);
+  }
+}
+ 
 // ==============================================================
 // User input
 // ==============================================================
+
+int selectedFanId = 1;
+
 void readInput() {
 
   if (Serial.available()) {
@@ -336,13 +469,13 @@ void readInput() {
         setFansSpeed(0);
         break;
       case '1':
-        setFansSpeed(1);
+        setFansSpeed(10);
         break;
       case '2':
-        setFansSpeed(7);
+        setFansSpeed(60);
         break;
       case '3':
-        setFansSpeed(11);
+        setFansSpeed(100);
         break;
       case 't': // temperature fan
         Serial.println("Fan 1 selected.");
@@ -363,9 +496,6 @@ void readInput() {
         Serial.println("Fan 4 selected.");
         selectedFanId = 4;
         setFanBackground(selectedFanId, CRGB::Blue);
-        break;
-      case 'o': // air quality fan
-        SetLedsOnOff(!ledsEnabled);      
         break;
       case ',':
         ledsSetColor = CRGB::Red; 
@@ -392,15 +522,15 @@ void readInput() {
         setPower(false);       
         break;
       case '>':
-        ledBrightness+= 5;
-        if (ledBrightness > 255){
-          ledBrightness = 255;
+        ledBrightnessPercent+= 5;
+        if (ledBrightnessPercent > 100){
+          ledBrightnessPercent = 100;
         }
         break;
       case '<':
-        ledBrightness-= 5;
-        if (ledBrightness <= 0){
-          ledBrightness = 0;
+        ledBrightnessPercent-= 5;
+        if (ledBrightnessPercent <= 0){
+          ledBrightnessPercent = 0;
         }
         break;
       default:
@@ -443,16 +573,21 @@ void printVariables() {
 void sleepNow() {
   Serial.println("Sleep!"); 
   setPower(0);
-    // setFansSpeed(0); // leave as is for wake mode.
-  SetLedsOnOff(false);
+  setFansSpeed(0);
+  ledBrightnessPercent = 0;
   publishTinamousStatus("Sleep mode activated.");
 }
 
 void wakeNow() {
   Serial.println("Wake!"); 
+
+  // TODO: Wake on previous speed or 
+  // have a desired wake speed for the fans.
+  setFansSpeed(0);
   setPower(1);
-  // setFansSpeed(11);?
-  SetLedsOnOff(true);
+  delay(2000);
+  setFansSpeed(100);
+  
   publishTinamousStatus("Waking up.");
 }
 
@@ -533,7 +668,13 @@ displayRange_t setupPressureDisplayRange() {
 // this is different to temp/humidity in that
 // it's only the upper range that matters.
 displayRange_t setupAirQualityDisplayRange() {
-  float idealValue = 0;
+
+  // Ideal would really be 0, however with at least
+  // 1 person observing it's likely to be a low but not 
+  // zero value so will make the display weird. hence
+  // set "idealValue" to about a normal level for 
+  // one person.
+  float idealValue = 400;
   int factor = 1;
 
   displayRange_t range;
@@ -573,6 +714,14 @@ displayRange_t setupWiFiDisplayRange() {
   range.factor = factor;
   // todo: offset? (e.g. +60 here).
   return range;
+}
+
+void switch1_pressed() {
+  handle_switch1_pressed = true;
+}
+
+void switch2_pressed() {
+  handle_switch2_pressed = true;
 }
 
 

@@ -18,7 +18,7 @@ typedef enum {
     PomodoroWorkOnly = 11, // todo
     PomodoroPlayOnly = 12, // todo
     FixedColor = 13, // todo
-    lightLevel = 14, // todo (need range)
+    LightLevel = 14, // todo (need range)
     // The user selected fan speed (0..11)
     SelectedFanSpeed = 15, // done
     // Fan Speed in RPM

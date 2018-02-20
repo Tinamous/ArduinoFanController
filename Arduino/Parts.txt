@@ -1,0 +1,64 @@
+Partlist
+
+Exported from ArduinoRgbFanController.sch at 29/01/2018 17:03
+
+EAGLE Version 7.4.0 Copyright (c) 1988-2015 CadSoft
+
+Assembly variant: 
+
+Part     Value                       Device                      Package                      Library               Sheet
+
+BME280   eBay BME280                 M06SILK_FEMALE_PTH          1X06                         SparkFun-Connectors   1
+BME680   SparkFun Qwiic BME680       M04PTH                      1X04                         SparkFun-Connectors   1
+C1                                   1UF-25V-10%(0805)"          0805-CAP                     SparkFun-Capacitors   1
+C2                                   1UF-25V-10%(0805)"          0805-CAP                     SparkFun-Capacitors   1
+C3                                   1UF-25V-10%(0805)"          0805-CAP                     SparkFun-Capacitors   1
+C4       47uF                        47UF-10V-10%(TANT)          EIA3528                      SparkFun-Capacitors   1
+C5       47uF                        47UF-10V-10%(TANT)          EIA3528                      SparkFun-Capacitors   1
+C6                                   1UF-25V-10%(0805)"          0805-CAP                     SparkFun-Capacitors   1
+C7                                   1UF-25V-10%(0805)"          0805-CAP                     SparkFun-Capacitors   1
+D1                                   LED1206-BOTTOM              LED-1206-BOTTOM              SparkFun-LED          1
+D2       12V                         LED-RED1206                 LED-1206                     SparkFun-LED          1
+D3       MBRA140                     DIODE-SCHOTTKY-MBRA140      SMA-DIODE                    SparkFun-DiscreteSemi 1
+D4       MBRA140                     DIODE-SCHOTTKY-MBRA140      SMA-DIODE                    SparkFun-DiscreteSemi 1
+IC1                                  78XXS                       78XXS                        v-reg                 1
+IC2      ARDUINO_MKRFOX1200PROTOPADS ARDUINO_MKRFOX1200PROTOPADS ARDUINO_MKRFOX1200_PROTOPADS Arduino               1
+JP1      Ext. 5V                     M023.5MM                    SCREWTERMINAL-3.5MM-2        SparkFun-Connectors   1
+JP2      INT 5V                      M02PTH                      1X02                         SparkFun-Connectors   1
+JP3                                  M05PTH                      1X05                         SparkFun-Connectors   1
+JP4                                  M025MM                      SCREWTERMINAL-5MM-2          SparkFun-Connectors   1
+JP5                                  M03POLAR                    MOLEX-1X3                    SparkFun-Connectors   1
+JP6      Fan1                        M04POLAR                    MOLEX-1X4                    SparkFun-Connectors   1
+JP8      Fan2                        M04POLAR                    MOLEX-1X4                    SparkFun-Connectors   1
+JP9      Fan3                        M04POLAR                    MOLEX-1X4                    SparkFun-Connectors   1
+JP13     Fan4                        M04POLAR                    MOLEX-1X4                    SparkFun-Connectors   1
+JP15     LED1                        M04PTH                      1X04                         SparkFun-Connectors   1
+JP25     LED2                        M04PTH                      1X04                         SparkFun-Connectors   1
+JP31     LED3                        M04PTH                      1X04                         SparkFun-Connectors   1
+JP34     LED4                        M04PTH                      1X04                         SparkFun-Connectors   1
+JP35     Fan5                        M03POLAR                    MOLEX-1X3                    SparkFun-Connectors   1
+JP36     LED5                        M04PTH                      1X04                         SparkFun-Connectors   1
+JP37     LED6                        M04PTH                      1X04                         SparkFun-Connectors   1
+JP38                                 M01PTH                      1X01                         SparkFun-Connectors   1
+JP110    POWER_JACKPTH               POWER_JACKPTH               POWER_JACK_PTH               SparkFun-Connectors   1
+Q1       IRLML9301TRPBF              MOSFET-PCHANNEL             SOT23-3                      SparkFun-DiscreteSemi 1
+Q2       2N7002                      MOSFET-NCHANNELAO3404A      SOT23-3                      SparkFun-DiscreteSemi 1
+Q3       2N7002                      MOSFET-NCHANNELAO3404A      SOT23-3                      SparkFun-DiscreteSemi 1
+Q4       IRLML9301TRPBF              MOSFET-PCHANNEL             SOT23-3                      SparkFun-DiscreteSemi 1
+R1                                   RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R2       40k                         RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R3       10k                         RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R11      470R                        RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R12      100k                        RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R13      100k                        RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R14      100R                        RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R15      100R                        RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R16      10k                         RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R17      16k                         RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R18      10R                         RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R19      100k                        RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R20      100k                        RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R21      10R                         RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R22      1M                          RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R23      1M                          RESISTOR0805-RES            0805                         SparkFun-Resistors    1
+R28      300R                        RESISTOR1206                1206                         SparkFun-Resistors    1

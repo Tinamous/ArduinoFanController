@@ -101,21 +101,9 @@ void setFan(int fanId) {
   fanInfo_t fanInfo = fanInfos[fanId];
   int set_speed = fanInfo.speedSet;
   int current_speed = fanInfo.currentSpeed;
-  int pwm_frequency = fanInfo.speedPwm[set_speed];
-  
-  Serial.print("switching fan ");
-  Serial.print(fanInfo.fanId);
-  Serial.print(" to setSpeed ");
-  Serial.print(set_speed);
-  Serial.print(" (pwm frequency ");
-  Serial.print(pwm_frequency);
-  Serial.print(" currentSpeed: ");
-  Serial.print(fanInfo.currentSpeed);
-  Serial.println(")");
-    
+  int pwm_frequency = (int)(set_speed * 2.55);
+     
   analogWrite(fanInfo.pwmPin, pwm_frequency);
-
-  Serial.println("fan speed set.");
 
   // Don't use fanInfo. as it's a copy and 
   // the fanInfos array isn't updated.
@@ -158,6 +146,7 @@ void setFansSpeed(int speed) {
   String message;
   message = "Setting fans to speed ";
   message = message + speed;
+  message = message + "%";
   
   publishTinamousStatus(message);
   
@@ -169,9 +158,26 @@ void setFansSpeed(int speed) {
 void setFansSpeed(int fanId, int speed) {
   fanInfos[fanId].speedSet = speed;
   
-  if (fanInfos[fanId].speedSet > 11) {
-    fanInfos[fanId].speedSet = 11;
+  if (fanInfos[fanId].speedSet > 100) {
+    fanInfos[fanId].speedSet = 100;
   }
+}
+
+// Delay on the main loop (and hence LED cycle) 
+// based on the fan speed. So running dots
+// go faster for a faster fan speed.
+void fanSpeedDelay() {
+int delayFactor;
+
+  if (isMasterPowerEnabled()) {
+    delayFactor = 100 - fanInfos[0].currentSpeed;
+  } else {
+    // fans not on, go very slow...
+    delayFactor = 100;
+  }
+
+  // 0 to 1s delay in loop for fan speed (100% to 0%)
+  delay(delayFactor);
 }
 
 // ============================================

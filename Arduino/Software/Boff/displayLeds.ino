@@ -21,15 +21,31 @@ int normalisedHoursFullScale[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3,
 // ==========================================================
 
 void setupNeopixels() {
+  FastLED.clear();
 
+  CRGB ledsSetColor = CRGB::Cyan;
+  //CRGB ledsSetColor = CHSV(255, 1.0, 20);
+  //ledsSetColor.r=50;
+  //ledsSetColor.g=50;
+  //ledsSetColor.b=50;
+  
+  // Default all the LEDs to black on start
+  // then setup the fans and strips as needed.
   for (int i=0; i< NUM_LEDS; i++) {
-    leds[i] = CRGB::Blue;
+    leds[i] = CRGB::Black;
+  }
+
+  // Make the noses off for all the fans
+  // as it doesn't show up well on camera.
+  for (int fanId=0; fanId<4; fanId++) {
+    setNoseColor(fanId, CRGB::Black);
+    setFanBackground(fanId, CRGB::Blue);
   }
   
   // 15 puts it on A0.
   // 6 - D6 - as used by protoboard at prsent.
   FastLED.addLeds<NEOPIXEL, 15>(leds, NUM_LEDS); 
-  FastLED.setBrightness(ledBrightness);
+  FastLED.setBrightness(ledBrightnessPercent * 2.55);
   Serial.println("Neopixels setup...");
   FastLED.show(); 
 }
@@ -42,17 +58,34 @@ void showSetupStageComplete(int stage) {
     delay(500);
 }
 
-// =================================================
+// ==================================================
 
-void SetLedsOnOff(bool newState) {
-  ledsEnabled = newState;
-  
-  if (ledsEnabled) {
-    Serial.println("All LEDs enabled.");
-  } else {
-    Serial.println("All LEDs off.");
-  }
+
+// Loop handler to update the Neopixels (i.e. LED leds + possible others)
+// code for this is in the displayLeds file.
+void ledsLoop() {
+  updateFansLeds();
+  updateStrip1Leds();
+  updateStrip2Leds();
+  endLedUpdate();
+
+  FastLED.show(); 
 }
+
+// ==================================================
+
+// Make the fan LEDs red to indicate they are starting.
+void makeFanLedsRed() {
+  int maxFan = 4;
+  for (int fanId = 0; fanId < maxFan; fanId++) {
+    setNoseColor(fanId, CRGB::Red);
+    setFanBackground(fanId, CRGB::Red);
+  }
+  FastLED.setBrightness(ledBrightnessPercent * 2.55);
+  FastLED.show();
+}
+
+// =================================================
 
 void updateFansLeds() {
   int maxFan = 4;
@@ -62,8 +95,185 @@ void updateFansLeds() {
   }
 }
 
-void updateStrip1Leds(){}
-void updateStrip2Leds(){}
+// 64 LEDs in the 4 fans.
+// Strip 1 is up facing at the back (if fitted).
+int strip1StartLedNumber = 65;
+int strip1EndLedNumber = strip1StartLedNumber + 61;
+int strip1LedCount = 61;
+
+// Strip 1 is front facing (if fitted).
+int strip2StartLedNumber = strip1EndLedNumber + 1; // 127
+int strip2EndLedNumber = strip2StartLedNumber + 162; // 288
+int strip2LedCount = 162;
+
+int strip1Direction = 1;
+int strip1RunningDotPosition = strip1StartLedNumber;
+int lastStrip1DotPosition = strip1StartLedNumber;
+
+int strip2RunningDotPosition = 0;
+int lastStrip2DotPosition = 0;
+
+int showAlexaInteraction = 0; // 0: off, 1: 
+
+void showAlexaConnectionActive() {
+
+  // If the LEDs are off (i.e. sleep more)
+  // switch them on to show the activity.
+  if (ledBrightnessPercent < 2) {
+    ledBrightnessPercent = 20;
+  }
+
+  showAlexaInteraction = 1;
+  for (int i = 0; i<4; i++) {
+    ledsLoop();
+    delay(300);
+  }
+  
+  // Ensure the strip is cleared
+  setStrip2Color(CRGB::Black);
+  showAlexaInteraction = 0;
+  ledsLoop();
+}
+
+// Update the 1st LED strip.
+// This may not be fitted.
+void updateStrip1Leds(){
+  // Check see if 
+  if (NUM_LEDS < strip1StartLedNumber) {
+    return;
+  }
+
+  // otherwise do our normal stuff.
+  //showStrip1RunningDisplay();
+  showStrip1FixedColor();
+}
+
+void updateStrip2Leds(){
+  // Check see if 
+  if (NUM_LEDS < strip2StartLedNumber) {
+    return;
+  }
+
+  CRGB color1 = CRGB::Blue;
+  CRGB color2 = CRGB::Cyan;
+
+  if (showAlexaInteraction == 1) {
+    showAlexaInteraction = 2;
+    showStrip2AlexaInteraction(color1, color2);
+    return;
+  }
+
+  if (showAlexaInteraction == 2) {
+    showAlexaInteraction = 1;
+    showStrip2AlexaInteraction(color2, color1);
+    return;
+  }
+
+  // otherwise do our normal stuff.
+  showStrip2FixedColor();
+  
+  // Only show the running display if the fans are on.
+  if (isMasterPowerEnabled()) {
+    showStrip2RunningDisplay();
+  }
+}
+
+void showStrip1FixedColor() {
+  setStrip1Color(ledsSetColor);
+}
+
+void showStrip2FixedColor() {
+  setStrip2Color(ledsSetColor);
+}
+
+void showStrip1RunningDisplay() {
+  strip1RunningDotPosition = strip1RunningDotPosition + strip1Direction;
+  
+  if (strip1RunningDotPosition > strip1LedCount) {
+    strip1RunningDotPosition = strip1LedCount;
+    strip1Direction = -1;
+  }
+  
+  if (strip1RunningDotPosition < 0) {
+    strip1RunningDotPosition = 0;
+    strip1Direction = +1;
+  }
+
+  setStrip1Led(lastStrip1DotPosition, CRGB::Black);
+  setStrip1Led(strip1RunningDotPosition, CRGB::Blue);
+  setStrip1Led(strip1RunningDotPosition+ strip1Direction, CRGB::Green);
+  setStrip1Led(strip1RunningDotPosition+ (strip1Direction*2), CRGB::Red);
+  
+  lastStrip1DotPosition = strip1RunningDotPosition;
+}
+
+void showStrip2RunningDisplay() {
+  
+  strip2RunningDotPosition++;
+  if (strip2RunningDotPosition > strip2LedCount) {
+    strip2RunningDotPosition = 0;
+  }
+
+  setStrip2Led(lastStrip2DotPosition, CRGB::Black);
+  lastStrip2DotPosition = strip2RunningDotPosition;
+
+  for (int offset = 0; offset < strip2LedCount; offset+=20) {
+    setStrip2Led(strip2RunningDotPosition + offset, CRGB::Cyan);
+    setStrip2Led(strip2RunningDotPosition + offset + 1, CRGB::Blue);
+    setStrip2Led(strip2RunningDotPosition + offset + 2, CRGB::Green);
+    setStrip2Led(strip2RunningDotPosition + offset + 3, CRGB::Green);
+    setStrip2Led(strip2RunningDotPosition + offset + 4, CRGB::Blue);
+    setStrip2Led(strip2RunningDotPosition + offset + 5, CRGB::Cyan);
+  }
+}
+
+void setStrip1Color(CRGB color) {
+  for (int index=0; index < strip1LedCount; index++) {
+     setStrip1Led(index, color);
+  }
+}
+
+void setStrip2Color(CRGB color) {
+  for (int index=0; index < strip2LedCount; index++) {
+     setStrip2Led(index, color);
+  }
+}
+
+void showStrip2AlexaInteraction(CRGB color1, CRGB color2) {
+  for (int index = 0; index < strip2LedCount; index+=6) {
+    setStrip2Led(index, color1);
+    setStrip2Led(index+1, color1);
+    setStrip2Led(index+2, color1);
+    setStrip2Led(index+3, color1);
+
+    setStrip2Led(index+4, color2);
+    setStrip2Led(index+5, color2);
+    setStrip2Led(index+6, color2);
+  }
+}
+
+void setStrip1Led(int index, CRGB color) {
+int ledIndex;
+
+  ledIndex = strip1StartLedNumber + index;
+  if (ledIndex > strip1EndLedNumber) {
+    // Ignore off the end
+    return;
+  }
+
+  leds[ledIndex] = color;
+}
+
+void setStrip2Led(int index, CRGB color) {
+int ledIndex;
+
+  ledIndex = strip2StartLedNumber + index;
+  if (ledIndex > strip2EndLedNumber) {
+    ledIndex = ledIndex - strip2LedCount;
+  }
+
+  leds[ledIndex] = color;
+}
 
 // This is the final say in LED updates, it
 // can override all other changes. e.g. to turn off the LEDs
@@ -88,10 +298,10 @@ void endLedUpdate() {
     }
 
     // Override any settings made to the LEDs to switch them off.
-    if (!ledsEnabled) {
+    if (ledBrightnessPercent < 2) {
       FastLED.setBrightness( 0 );
     } else {
-      FastLED.setBrightness( ledBrightness );
+      FastLED.setBrightness( ledBrightnessPercent * 2.55 );
     }
 }
 
@@ -305,11 +515,29 @@ void showNosePressure(int fanId) {
 // ----------------------------------
 
 void showAirQuality(int fanId) {
-   mapToFan(fanId, eCO2, airQualityRange);
+  if (hasBme680) {
+    // TODO: different range
+    mapToFan(fanId, gas_resistance, airQualityRange);
+  } else if (hasCCS811) {
+    mapToFan(fanId, eCO2, airQualityRange);
+  } else {
+    // No sensor.
+    setNoseColor(fanId, CRGB::Black);
+    setFanBackground(fanId, CRGB::Black);
+  }
 }
 
 void showNoseAirQuality(int fanId) {
-  setGenericNose(fanId, eCO2, airQualityRange);
+  if (hasBme680) {
+    // TODO: different range
+    setGenericNose(fanId, gas_resistance, airQualityRange); 
+  } else if (hasCCS811) {
+    setGenericNose(fanId, eCO2, airQualityRange);
+  } else {
+    // No sensor.
+    setNoseColor(fanId, CRGB::Black);
+    setFanBackground(fanId, CRGB::Black);
+  }  
 }
 
 // ----------------------------------
@@ -423,7 +651,7 @@ void showNoseFixedColor(int fanId) {
 // ----------------------------------
 void showFanSelectedSpeed(int fanId) {
   // 0..11 - directly maps to the hour.
-  int speed = fanInfos[fanId].speedSet;
+  int speed = fanInfos[fanId].speedSet * (11 / 100);
 
   setFanBackground(fanId, CRGB::Blue);
 
@@ -467,7 +695,9 @@ void showFanSpeedLowError(int fanId) {
   if (!fanInfos[fanId].enabled) {
     return;
   }
- 
+
+  // Needs updating for speed as %
+  /*
   int rpm = fanInfos[fanId].computedRpm;
   // Expect the rpm to be at-least that of the speed below the
   // currentl selected one.  
@@ -479,29 +709,30 @@ void showFanSpeedLowError(int fanId) {
     Serial.print(" RPM below range. Making a red nose.");
     Serial.println();
     setNoseColor(fanId, CRGB::Red);
-  }  
+  } 
+  */
 }
 
 displayRange_t setupFanDisplayRange(int fanId) {
 
   fanInfo_t fanInfo = fanInfos[fanId];
-  
+
   // Ideal value depends on the fan PWM.
   // Min/Max depend on the fan...
   displayRange_t range;
-  range.idealValue = fanInfo.expectedRpm[fanInfo.speedSet]; // lookup fan/ fan run mode.
+  range.idealValue = 1200; //fanInfo.expectedRpm[fanInfo.speedSet]; // lookup fan/ fan run mode. HACK!
   
   if (fanInfo.speedSet > 0) {
-    range.idealRangeLow = fanInfo.expectedRpm[fanInfo.speedSet-1]; 
+    range.idealRangeLow = 500; //fanInfo.expectedRpm[fanInfo.speedSet-1]; 
   } else {
     range.idealRangeLow = 0;
   }
 
-  // 11 is the max fan speed setting (0..11).
-  if (fanInfo.speedSet < 11) {
-    range.idealRangeHigh = fanInfo.expectedRpm[fanInfo.speedSet+1]; 
+  // 11 is the max fan speed setting (0..100).
+  if (fanInfo.speedSet < 100) {
+    range.idealRangeHigh = 1200; //fanInfo.expectedRpm[fanInfo.speedSet+1]; 
   } else {
-    range.idealRangeHigh = fanInfo.expectedRpm[fanInfo.speedSet] + 50;
+    range.idealRangeHigh = 1200; //fanInfo.expectedRpm[fanInfo.speedSet] + 50;
   }
 
   // Hack for the -ve value to balance the display.
@@ -822,7 +1053,6 @@ void setLedHourRange(int fanId, int value, displayRange_t displayRange, int hour
 void setGenericNose(int fanId, int value, displayRange_t displayRange) {
   // Low
   if (value < displayRange.idealRangeLow) {
-    Serial.println("Nose below range");
     setNoseColor(fanId, CRGB::Blue);
     return;  
   } 
@@ -847,6 +1077,7 @@ void setNoseColor(int fanId, CRGB noseColor) {
   }  
 }
 
+// Set the fan background (outer ring) to a certain color.
 void setFanBackground(int fanId, CRGB color) { 
   // Each fan has 16 LEDs. 0-3 are on the nose.
   int startLed = 4;
@@ -862,7 +1093,7 @@ void setLedByHour(int fanId, int hour, CRGB color) {
   setLed(fanId, fanOuterLedLookup[hour], color);
 }
 
-// TODO: Pass colour in...
+// Set a specific LED on the fan.
 void setLed(int fanId, int ledId, CRGB color) {
   if (ledId > 15) {
     Serial.println("LedId out of range.");
